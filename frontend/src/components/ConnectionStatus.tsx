@@ -1,15 +1,17 @@
 interface ConnectionStatusProps {
-  lastUpdate: Date;
+  label: string;
+  online: boolean;
+  lastUpdate?: string;
 }
 
-export function ConnectionStatus({ lastUpdate }: ConnectionStatusProps) {
+export function ConnectionStatus({ label, online, lastUpdate }: ConnectionStatusProps) {
   return (
-    <div className="connection-status d-flex align-items-center gap-2">
-      <span className="status-dot" aria-hidden="true" />
+    <div className="connection-status d-flex align-items-center gap-2" role="status">
+      <span className={`status-dot ${online ? '' : 'status-dot-offline'}`} aria-hidden="true" />
       <div>
-        <span className="d-block fw-semibold">ESP32 conectado</span>
+        <span className="d-block fw-semibold">{label}</span>
         <small className="text-body-secondary">
-          Atualizado às {lastUpdate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+          {lastUpdate ? `Última leitura: ${new Date(lastUpdate).toLocaleString('pt-BR')}` : 'Nenhuma leitura recebida'}
         </small>
       </div>
     </div>

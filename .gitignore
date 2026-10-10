@@ -1,0 +1,11 @@
+frontend/node_modules
+frontend/package-lock.json
+frontend/dist/
+frontend/*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
+frontend/.env.local
+backend/.venv/
+__pycache__/
+.pytest_cache/
+firmware/ms_monitor/config.h

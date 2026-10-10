@@ -1,20 +1,16 @@
-import { useState } from 'react';
 import { ConnectionStatus } from './components/ConnectionStatus';
 import { FanCard } from './components/FanCard';
 import { SensorCard } from './components/SensorCard';
-import { mockSensorData } from './data/mockSensorData';
+import { useReadings } from './hooks/useReadings';
 
 export function App() {
-  const [sensorData, setSensorData] = useState(mockSensorData);
-
-  function toggleFan() {
-    setSensorData((current) => ({
-      ...current,
-      fanActive: !current.fanActive,
-      fanMode: 'manual',
-      timestamp: new Date(),
-    }));
-  }
+  const { latest, apiStatus } = useReadings();
+  const sensorData = latest.data;
+  const deviceLabel = { waiting: 'Aguardando primeira leitura', online: 'Recebendo dados', stale: 'Dispositivo sem dados recentes' }[latest.device_status];
+  const label = apiStatus === 'unreachable' ? 'API inacessível' : apiStatus === 'loading' ? 'Conectando à API' : deviceLabel;
+  const outdated = apiStatus !== 'online' || latest.device_status === 'stale';
+  const dhtDescription = !sensorData ? 'Aguardando leitura' : !sensorData.dht_ok ? 'Falha na leitura do DHT22' : outdated ? 'Última leitura desatualizada' : 'Leitura do DHT22';
+  const format = (value: number | null | undefined, unit: string) => value == null ? '—' : `${value.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} ${unit}`;
 
   return (
     <div className="app-shell min-vh-100">
@@ -24,7 +20,7 @@ export function App() {
             <span className="brand-mark"><i className="bi bi-activity" /></span>
             MS-Monitor
           </a>
-          <ConnectionStatus lastUpdate={sensorData.timestamp} />
+          <ConnectionStatus label={label} online={apiStatus === 'online' && latest.device_status === 'online'} lastUpdate={sensorData?.received_at} />
         </div>
       </nav>
 
@@ -37,14 +33,18 @@ export function App() {
           </p>
         </header>
 
+        <p className={`alert ${outdated || sensorData?.dht_ok === false ? 'alert-warning' : 'alert-info'}`} role="status">
+          {label}.{sensorData && outdated ? ' Os valores exibidos correspondem à última leitura recebida.' : ''}
+          {sensorData?.dht_ok === false ? ' Falha do DHT22: temperatura e umidade indisponíveis; telemetria de vibração preservada.' : ''}
+        </p>
         <section aria-label="Leituras atuais" className="row g-4">
           <div className="col-12 col-md-6 col-xl-3">
             <SensorCard
               accent="temperature"
               icon="bi-thermometer-half"
               label="Temperatura"
-              value={`${sensorData.temperature.toFixed(1)} °C`}
-              description="Dentro da faixa monitorada"
+              value={format(sensorData?.temperature_c, '°C')}
+              description={dhtDescription}
             />
           </div>
           <div className="col-12 col-md-6 col-xl-3">
@@ -52,8 +52,8 @@ export function App() {
               accent="humidity"
               icon="bi-droplet-half"
               label="Umidade do ar"
-              value={`${sensorData.humidity.toFixed(1)}%`}
-              description="Nível atual no interior do silo"
+              value={format(sensorData?.humidity_pct, '%')}
+              description={dhtDescription}
             />
           </div>
           <div className="col-12 col-md-6 col-xl-3">
@@ -61,12 +61,12 @@ export function App() {
               accent="vibration"
               icon="bi-soundwave"
               label="Vibração"
-              value={`${sensorData.vibration.toFixed(2)} g`}
-              description="Sem comportamento anormal"
+              value={sensorData ? `${sensorData.vibration_transitions} transições` : '—'}
+              description={sensorData ? `Janela: ${format(sensorData.window_ms / 1000, 's')} (${sensorData.window_ms} ms) • DO: ${sensorData.vibration_do}${outdated ? ' • Desatualizada' : ''}` : 'Aguardando telemetria do SW-420'}
             />
           </div>
           <div className="col-12 col-md-6 col-xl-3">
-            <FanCard active={sensorData.fanActive} mode={sensorData.fanMode} onToggle={toggleFan} />
+            <FanCard />
           </div>
         </section>
 
@@ -77,7 +77,7 @@ export function App() {
                 <div className="d-flex justify-content-between align-items-center mb-4">
                   <div>
                     <h2 className="h5 fw-bold mb-1">Histórico das leituras</h2>
-                    <p className="text-body-secondary small mb-0">Próxima etapa: dados da API</p>
+                    <p className="text-body-secondary small mb-0">Reservado para uma próxima etapa</p>
                   </div>
                   <button className="btn btn-sm btn-light" type="button" disabled>
                     Últimas 24h
@@ -86,7 +86,7 @@ export function App() {
                 <div className="chart-placeholder d-flex align-items-center justify-content-center">
                   <div className="text-center text-body-secondary">
                     <i className="bi bi-bar-chart-line fs-2 d-block mb-2" />
-                    <span>O gráfico histórico será conectado à API.</span>
+                    <span>Histórico ainda não implementado.</span>
                   </div>
                 </div>
               </div>
@@ -97,16 +97,16 @@ export function App() {
               <div className="card-body p-4">
                 <h2 className="h5 fw-bold mb-4">Status do sistema</h2>
                 <div className="system-status-item">
-                  <span><i className="bi bi-wifi me-2 text-success" />Conectividade</span>
-                  <strong className="text-success">Normal</strong>
+                  <span><i className="bi bi-wifi me-2" />API</span>
+                  <strong>{apiStatus === 'online' ? 'Acessível' : apiStatus === 'loading' ? 'Conectando' : 'Inacessível'}</strong>
                 </div>
                 <div className="system-status-item">
                   <span><i className="bi bi-cpu me-2 text-primary" />ESP32</span>
-                  <strong className="text-success">Online</strong>
+                  <strong>{apiStatus === 'online' ? deviceLabel : 'Estado desconhecido'}</strong>
                 </div>
                 <div className="system-status-item">
-                  <span><i className="bi bi-shield-check me-2 text-success" />Alertas</span>
-                  <strong className="text-success">Nenhum</strong>
+                  <span><i className="bi bi-thermometer me-2" />DHT22</span>
+                  <strong>{!sensorData ? 'Aguardando' : sensorData.dht_ok ? 'Leitura válida' : 'Falha'}</strong>
                 </div>
               </div>
             </div>

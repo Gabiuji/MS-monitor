@@ -9,6 +9,13 @@ body {
   background: #f5f7fb;
 }
 
+.status-dot-offline {
+  background: #d69e00 !important;
+  box-shadow: 0 0 0 4px rgba(214, 158, 0, 0.12) !important;
+}
+.system-status-item { gap: 1rem; }
+.system-status-item strong { text-align: right; }
+
 .app-shell {
   background: #f5f7fb;
 }
