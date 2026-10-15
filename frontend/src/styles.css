@@ -44,10 +44,99 @@ body {
 }
 
 .sensor-card,
-.dashboard-card {
+.dashboard-card,
+.ai-diagnosis-card {
   background: #fff;
   border-radius: 1rem;
   box-shadow: 0 0.35rem 1.5rem rgba(31, 45, 61, 0.06);
+}
+
+.ai-diagnosis-card {
+  border-left: 6px solid #6c757d !important;
+}
+
+.ai-diagnosis-card.ai-risk-low {
+  border-left-color: #198754 !important;
+  background: linear-gradient(110deg, #fff, #f1fbf5);
+}
+
+.ai-diagnosis-card.ai-risk-moderate {
+  border-left-color: #e0a800 !important;
+  background: linear-gradient(110deg, #fff, #fffaf0);
+}
+
+.ai-diagnosis-card.ai-risk-high {
+  border-left-color: #fd7e14 !important;
+  background: linear-gradient(110deg, #fff, #fff5eb);
+}
+
+.ai-diagnosis-card.ai-risk-critical {
+  border-left-color: #dc3545 !important;
+  background: linear-gradient(110deg, #fff, #fff0f1);
+}
+
+.ai-diagnosis-icon {
+  display: flex;
+  width: 3.25rem;
+  height: 3.25rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  color: #6c757d;
+  background: rgba(108, 117, 125, 0.12);
+  border-radius: 0.9rem;
+  font-size: 1.6rem;
+}
+
+.ai-risk-low .ai-diagnosis-icon,
+.ai-risk-low .ai-risk-indicator {
+  color: #198754;
+  background-color: rgba(25, 135, 84, 0.12);
+}
+
+.ai-risk-moderate .ai-diagnosis-icon,
+.ai-risk-moderate .ai-risk-indicator {
+  color: #997404;
+  background-color: rgba(224, 168, 0, 0.14);
+}
+
+.ai-risk-high .ai-diagnosis-icon,
+.ai-risk-high .ai-risk-indicator {
+  color: #fd7e14;
+  background-color: rgba(253, 126, 20, 0.14);
+}
+
+.ai-risk-critical .ai-diagnosis-icon,
+.ai-risk-critical .ai-risk-indicator {
+  color: #dc3545;
+  background-color: rgba(220, 53, 69, 0.12);
+}
+
+.ai-risk-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: fit-content;
+  padding: 0.55rem 0.8rem;
+  color: #495057;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(73, 80, 87, 0.12);
+  border-radius: 2rem;
+}
+
+.ai-risk-indicator {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+}
+
+.ai-reasons {
+  padding-left: 1.1rem;
+}
+
+.ai-reasons li + li {
+  margin-top: 0.35rem;
 }
 
 .sensor-card {

@@ -2,6 +2,7 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 from app import create_app
+from ai_service import Diagnosis
 
 
 @pytest.fixture
@@ -15,6 +16,19 @@ def payload():
     return dict(device_id="simulated-test", uptime_ms=15000, window_ms=2500,
                 temperature_c=24.8, humidity_pct=59.2, dht_ok=True,
                 vibration_do=0, vibration_transitions=44)
+
+
+class FakeRiskModel:
+    def diagnose(self, reading, generated_at):
+        return Diagnosis(
+            risk_level="high",
+            risk_score=0.72,
+            confidence=0.84,
+            message="Condições favoráveis à deterioração.",
+            reasons=["Umidade relativa do ar elevada."],
+            model_version="test",
+            generated_at=generated_at,
+        )
 
 
 def test_waiting_and_health(setup):
@@ -36,6 +50,24 @@ def test_post_online_stale_and_recovery(setup):
     assert client.get("/health").status_code == 200
     client.post("/api/readings", json=payload())
     assert client.get("/api/readings/latest").json()["device_status"] == "online"
+
+
+def test_latest_includes_ai_diagnosis(setup):
+    now = setup[1]
+    with TestClient(create_app(clock=lambda: now[0], risk_model=FakeRiskModel())) as client:
+        client.post("/api/readings", json=payload() | dict(probe_ok=True, probe_temperature_c=26.5))
+        latest = client.get("/api/readings/latest").json()
+    assert latest["diagnosis"]["risk_level"] == "high"
+    assert latest["diagnosis"]["risk_score"] == 0.72
+    assert latest["diagnosis"]["model_version"] == "test"
+
+
+def test_latest_diagnosis_requires_probe(setup):
+    client, _ = setup
+    client.post("/api/readings", json=payload())
+    diagnosis = client.get("/api/readings/latest").json()["diagnosis"]
+    assert diagnosis["risk_level"] == "unavailable"
+    assert "sonda" in diagnosis["message"]
 
 
 def test_dht_failure(setup):

@@ -12,3 +12,4 @@ firmware/ms_monitor/config.h
 data/
 ai/artifacts/
 ai/.venv/
+ai/*.egg-info/

@@ -128,8 +128,10 @@ além de atributos derivados dessas leituras. Consulte o
 
 A API mantém apenas a última leitura em memória; reiniciá-la apaga os dados.
 O dashboard já apresenta as leituras principais e a integração inicial com os
-sensores está estruturada. O histórico persistente e o modelo de IA ainda estão
-em desenvolvimento.
+sensores está estruturada. O dashboard também possui um card destacado para o
+diagnóstico preventivo da IA, atualizado junto com o polling da última leitura.
+O histórico persistente e a validação do modelo com dados reais ainda estão em
+desenvolvimento.
 
 O dataset de degradação disponível em `data/dataset.json` será utilizado para
 criar o baseline do classificador. A validação deverá priorizar divisões por

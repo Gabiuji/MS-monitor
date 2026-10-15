@@ -1,12 +1,15 @@
 import os
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 from threading import Lock
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from ai_service import Diagnosis, ModelUnavailableError, RiskModel
 
 
 class Reading(BaseModel):
@@ -48,7 +51,7 @@ class StoredReading(Reading):
     received_at: datetime
 
 
-def create_app(clock=time.monotonic):
+def create_app(clock=time.monotonic, risk_model=None):
     app = FastAPI(title="MS-Monitor")
 
     @app.exception_handler(RequestValidationError)
@@ -63,6 +66,9 @@ def create_app(clock=time.monotonic):
     lock = Lock()
     latest = None
     accepted_at = None
+    model = risk_model or RiskModel(
+        Path(__file__).resolve().parents[1] / "ai" / "artifacts" / "risk_model.joblib"
+    )
 
     @app.get("/health")
     def health():
@@ -82,7 +88,24 @@ def create_app(clock=time.monotonic):
             if latest is None:
                 return dict(data=None, device_status="waiting", age_seconds=None)
             age = max(0.0, clock() - accepted_at)
-            return dict(data=latest, device_status="stale" if age >= 10 else "online", age_seconds=age)
+            try:
+                diagnosis = model.diagnose(latest, latest.received_at)
+            except ModelUnavailableError as error:
+                diagnosis = Diagnosis(
+                    risk_level="unavailable",
+                    risk_score=None,
+                    confidence=None,
+                    message="Diagnóstico indisponível: modelo não carregado.",
+                    reasons=[str(error)],
+                    model_version=None,
+                    generated_at=latest.received_at,
+                )
+            return dict(
+                data=latest,
+                device_status="stale" if age >= 10 else "online",
+                age_seconds=age,
+                diagnosis=diagnosis,
+            )
 
     return app
 

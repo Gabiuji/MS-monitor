@@ -1,5 +1,6 @@
 import { ConnectionStatus } from './components/ConnectionStatus';
 import { FanCard } from './components/FanCard';
+import { AIDiagnosisCard } from './components/AIDiagnosisCard';
 import { SensorCard } from './components/SensorCard';
 import { useReadings } from './hooks/useReadings';
 
@@ -41,6 +42,7 @@ export function App() {
           {sensorData?.dht_ok === false ? ' Falha do DHT22: temperatura e umidade indisponíveis; telemetria de vibração preservada.' : ''}
           {sensorData?.probe_ok === false ? ' Falha na leitura da sonda MAX6675.' : ''}
         </p>
+        <AIDiagnosisCard diagnosis={latest.diagnosis} waitingForReading={!sensorData} />
         <section aria-label="Leituras atuais" className="row g-4">
           <div className="col-12 col-md-6 col-xl">
             <SensorCard
