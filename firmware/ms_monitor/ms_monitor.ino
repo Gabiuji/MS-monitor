@@ -3,13 +3,18 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
+#include <max6675.h>
 #include "config.h"
 
 constexpr uint8_t DHT_PIN = 17;
 constexpr uint8_t VIBRATION_PIN = 22;
+constexpr uint8_t PROBE_SCK_PIN = 13;
+constexpr uint8_t PROBE_CS_PIN = 23;
+constexpr uint8_t PROBE_SO_PIN = 39;
 constexpr uint32_t READING_INTERVAL_MS = 2500;
 constexpr uint32_t WIFI_RETRY_INTERVAL_MS = 10000;
 DHT dht(DHT_PIN, DHT22);
+MAX6675 probe(PROBE_SCK_PIN, PROBE_CS_PIN, PROBE_SO_PIN);
 volatile uint32_t transitions = 0;
 portMUX_TYPE counterLock = portMUX_INITIALIZER_UNLOCKED;
 uint32_t windowStart = 0;
@@ -26,6 +31,12 @@ void setup() {
   Serial.begin(115200);
   dht.begin();
   pinMode(VIBRATION_PIN, INPUT);
+  pinMode(PROBE_SO_PIN, INPUT);
+  pinMode(PROBE_CS_PIN, OUTPUT);
+  pinMode(PROBE_SCK_PIN, OUTPUT);
+  digitalWrite(PROBE_SCK_PIN, LOW);
+  digitalWrite(PROBE_CS_PIN, HIGH);
+  // The first 2500 ms window also covers the initial conversion (up to 220 ms).
   portENTER_CRITICAL(&counterLock);
   windowStart = millis();
   portEXIT_CRITICAL(&counterLock);
@@ -67,8 +78,12 @@ void loop() {
   float temperature = dht.readTemperature();
   bool dhtOk = isfinite(temperature) && isfinite(humidity)
     && temperature >= -40 && temperature <= 80 && humidity >= 0 && humidity <= 100;
+  float probeTemperature = probe.readCelsius();
+  bool probeOk = isfinite(probeTemperature) && probeTemperature >= 0 && probeTemperature <= 1024;
   if (dhtOk) Serial.printf("Temperature: %.1f C | Humidity: %.1f %%", temperature, humidity);
   else Serial.print("DHT22: read failure");
+  if (probeOk) Serial.printf(" | Probe: %.2f C", probeTemperature);
+  else Serial.print(" | MAX6675: read failure");
   Serial.printf(" | DO: %d | Transitions: %lu | Window: %lu ms\n", signalLevel,
                 (unsigned long)transitionCount, (unsigned long)windowMs);
 
@@ -91,6 +106,9 @@ void loop() {
   }
   document["vibration_do"] = signalLevel;
   document["vibration_transitions"] = transitionCount;
+  document["probe_ok"] = probeOk;
+  if (probeOk) document["probe_temperature_c"] = probeTemperature;
+  else document["probe_temperature_c"] = nullptr;
   String payload;
   serializeJson(document, payload);
   WiFiClient client;

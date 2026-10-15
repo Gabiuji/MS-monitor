@@ -81,3 +81,76 @@ def test_cors(setup):
     assert allowed.headers["access-control-allow-origin"] == "http://localhost:5173"
     blocked = client.get("/health", headers={"Origin": "http://example.com"})
     assert "access-control-allow-origin" not in blocked.headers
+
+
+@pytest.mark.parametrize("probe_temperature", [0, 25.25, 1023.75])
+def test_probe_reading_roundtrip(setup, probe_temperature):
+    client, now = setup
+    data = payload() | dict(probe_ok=True, probe_temperature_c=probe_temperature)
+    response = client.post("/api/readings", json=data)
+    assert response.status_code == 201
+    stored = response.json()
+    assert stored["temperature_c"] == 24.8
+    assert stored["probe_temperature_c"] == probe_temperature
+    assert stored["probe_ok"] is True
+    latest = client.get("/api/readings/latest").json()
+    assert latest["data"] == stored
+    assert latest["device_status"] == "online"
+    now[0] += 10
+    stale = client.get("/api/readings/latest").json()
+    assert stale["device_status"] == "stale"
+    assert stale["data"] == stored
+
+
+@pytest.mark.parametrize("dht_ok,probe_ok", [(True, False), (False, True), (False, False)])
+def test_sensor_failures_are_independent(setup, dht_ok, probe_ok):
+    client, _ = setup
+    data = payload() | dict(dht_ok=dht_ok, temperature_c=24.8 if dht_ok else None,
+                            humidity_pct=59.2 if dht_ok else None,
+                            probe_ok=probe_ok, probe_temperature_c=25.25 if probe_ok else None)
+    assert client.post("/api/readings", json=data).status_code == 201
+    stored = client.get("/api/readings/latest").json()["data"]
+    for key, value in data.items():
+        assert stored[key] == value
+
+
+def test_legacy_reading_clears_previous_probe(setup):
+    client, _ = setup
+    client.post("/api/readings", json=payload() | dict(probe_ok=True, probe_temperature_c=25.25))
+    legacy = client.post("/api/readings", json=payload())
+    assert legacy.status_code == 201
+    for stored in (legacy.json(), client.get("/api/readings/latest").json()["data"]):
+        assert stored["probe_temperature_c"] is None
+        assert stored["probe_ok"] is None
+
+
+@pytest.mark.parametrize("probe_fields", [
+    dict(probe_ok=True, probe_temperature_c=None),
+    dict(probe_ok=False, probe_temperature_c=25.25),
+    dict(probe_ok=None, probe_temperature_c=None),
+    dict(probe_ok=None, probe_temperature_c=25.25),
+    dict(probe_ok=True), dict(probe_ok=False), dict(probe_temperature_c=25.25),
+    dict(probe_temperature_c=None), dict(probe_ok=None),
+    dict(probe_ok=True, probe_temperature_c=-0.25),
+    dict(probe_ok=True, probe_temperature_c=1024.25),
+    dict(probe_ok=1, probe_temperature_c=25.25),
+    dict(probe_ok=True, probe_temperature_c="25.25"),
+    dict(probe_ok=True, probe_temperature_c=True),
+])
+def test_invalid_probe_preserves_last_reading(setup, probe_fields):
+    client, now = setup
+    valid = client.post("/api/readings", json=payload()).json()
+    now[0] += 10
+    assert client.post("/api/readings", json=payload() | probe_fields).status_code == 422
+    latest = client.get("/api/readings/latest").json()
+    assert latest["data"] == valid
+    assert latest["device_status"] == "stale"
+
+
+@pytest.mark.parametrize("value", ["NaN", "Infinity", "-Infinity"])
+def test_nonfinite_probe(setup, value):
+    client, _ = setup
+    body = json.dumps(payload() | dict(probe_ok=True, probe_temperature_c=25.25)).replace("25.25", value)
+    response = client.post("/api/readings", content=body, headers={"Content-Type": "application/json"})
+    assert response.status_code == 422
+    assert client.get("/api/readings/latest").json()["data"] is None

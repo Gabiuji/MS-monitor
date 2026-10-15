@@ -14,8 +14,12 @@
 | dht_ok | booleano; true exige ambos os valores, false exige ambos null |
 | vibration_do | inteiro 0 ou 1, não booleano |
 | vibration_transitions | inteiro ≥ 0 |
+| probe_temperature_c | número finito entre 0 e 1024 °C, ou null |
+| probe_ok | booleano no payload novo; true exige temperatura, false exige null |
 
-Todos os campos são obrigatórios; campos extras e coerção de strings/bools em números são rejeitados. NaN e Infinity são rejeitados.
+Os campos anteriores à sonda continuam obrigatórios; campos extras e coerção de strings/bools em números são rejeitados. NaN e Infinity são rejeitados. `temperature_c` continua sendo a temperatura do ar (DHT22).
+
+Para compatibilidade, payloads antigos podem omitir ambos os campos da sonda; POST e GET retornam `probe_temperature_c: null` e `probe_ok: null`. Quando enviados, os dois são obrigatórios juntos, e `probe_ok` deve ser booleano. `true` exige temperatura válida (inclusive zero); `false` exige temperatura null. Enviar status null explicitamente é inválido: a ausência é reservada ao firmware antigo. Falhas do DHT22 e da sonda são independentes.
 
 `GET /api/readings/latest` → 200 com envelope:
 

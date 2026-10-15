@@ -10,7 +10,10 @@ export function App() {
   const label = apiStatus === 'unreachable' ? 'API inacessível' : apiStatus === 'loading' ? 'Conectando à API' : deviceLabel;
   const outdated = apiStatus !== 'online' || latest.device_status === 'stale';
   const dhtDescription = !sensorData ? 'Aguardando leitura' : !sensorData.dht_ok ? 'Falha na leitura do DHT22' : outdated ? 'Última leitura desatualizada' : 'Leitura do DHT22';
-  const format = (value: number | null | undefined, unit: string) => value == null ? '—' : `${value.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} ${unit}`;
+  const format = (value: number | null | undefined, unit: string, digits = 1) => value == null ? '—' : `${value.toLocaleString('pt-BR', { minimumFractionDigits: digits, maximumFractionDigits: digits })} ${unit}`;
+  const probeValue = sensorData?.probe_ok === false ? 'Falha na leitura'
+    : sensorData?.probe_ok == null || sensorData.probe_temperature_c == null ? 'Sem leitura da sonda'
+    : format(sensorData.probe_temperature_c, '°C', 2);
 
   return (
     <div className="app-shell min-vh-100">
@@ -33,21 +36,31 @@ export function App() {
           </p>
         </header>
 
-        <p className={`alert ${outdated || sensorData?.dht_ok === false ? 'alert-warning' : 'alert-info'}`} role="status">
+        <p className={`alert ${outdated || sensorData?.dht_ok === false || sensorData?.probe_ok === false ? 'alert-warning' : 'alert-info'}`} role="status">
           {label}.{sensorData && outdated ? ' Os valores exibidos correspondem à última leitura recebida.' : ''}
           {sensorData?.dht_ok === false ? ' Falha do DHT22: temperatura e umidade indisponíveis; telemetria de vibração preservada.' : ''}
+          {sensorData?.probe_ok === false ? ' Falha na leitura da sonda MAX6675.' : ''}
         </p>
         <section aria-label="Leituras atuais" className="row g-4">
-          <div className="col-12 col-md-6 col-xl-3">
+          <div className="col-12 col-md-6 col-xl">
             <SensorCard
               accent="temperature"
               icon="bi-thermometer-half"
-              label="Temperatura"
+              label="Temperatura do ar"
               value={format(sensorData?.temperature_c, '°C')}
               description={dhtDescription}
             />
           </div>
-          <div className="col-12 col-md-6 col-xl-3">
+          <div className="col-12 col-md-6 col-xl">
+            <SensorCard
+              accent="temperature"
+              icon="bi-thermometer"
+              label="Temperatura da sonda"
+              value={probeValue}
+              description={sensorData && outdated ? 'Última leitura desatualizada • Termopar tipo K / MAX6675' : 'Temperatura no ponto da sonda • Termopar tipo K / MAX6675'}
+            />
+          </div>
+          <div className="col-12 col-md-6 col-xl">
             <SensorCard
               accent="humidity"
               icon="bi-droplet-half"
@@ -56,7 +69,7 @@ export function App() {
               description={dhtDescription}
             />
           </div>
-          <div className="col-12 col-md-6 col-xl-3">
+          <div className="col-12 col-md-6 col-xl">
             <SensorCard
               accent="vibration"
               icon="bi-soundwave"
@@ -65,7 +78,7 @@ export function App() {
               description={sensorData ? `Janela: ${format(sensorData.window_ms / 1000, 's')} (${sensorData.window_ms} ms) • DO: ${sensorData.vibration_do}${outdated ? ' • Desatualizada' : ''}` : 'Aguardando telemetria do SW-420'}
             />
           </div>
-          <div className="col-12 col-md-6 col-xl-3">
+          <div className="col-12 col-md-6 col-xl">
             <FanCard />
           </div>
         </section>

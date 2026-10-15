@@ -19,6 +19,8 @@ class Reading(BaseModel):
     dht_ok: bool
     vibration_do: int = Field(ge=0, le=1)
     vibration_transitions: int = Field(ge=0)
+    probe_temperature_c: float | None = Field(default=None, ge=0, le=1024)
+    probe_ok: bool | None = None
 
     @model_validator(mode="after")
     def consistent_dht(self):
@@ -26,6 +28,19 @@ class Reading(BaseModel):
         absent = self.temperature_c is None and self.humidity_pct is None
         if (self.dht_ok and not present) or (not self.dht_ok and not absent):
             raise ValueError("Valid DHT readings require both values; failed readings require both null")
+        return self
+
+    @model_validator(mode="after")
+    def consistent_probe(self):
+        provided = self.model_fields_set & {"probe_temperature_c", "probe_ok"}
+        if not provided:
+            return self
+        if provided != {"probe_temperature_c", "probe_ok"}:
+            raise ValueError("Both probe fields must be provided together")
+        if self.probe_ok is None:
+            raise ValueError("Probe status must be a boolean when provided")
+        if self.probe_ok != (self.probe_temperature_c is not None):
+            raise ValueError("Valid probe readings require a temperature; failed readings require null")
         return self
 
 
@@ -57,7 +72,7 @@ def create_app(clock=time.monotonic):
     def post_reading(reading: Reading):
         nonlocal latest, accepted_at
         with lock:
-            latest = StoredReading(**reading.model_dump(), received_at=datetime.now(timezone.utc))
+            latest = StoredReading(**reading.model_dump(exclude_unset=True), received_at=datetime.now(timezone.utc))
             accepted_at = clock()
             return latest
 

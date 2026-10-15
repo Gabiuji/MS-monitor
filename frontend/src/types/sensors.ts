@@ -5,6 +5,8 @@ export interface SensorReading {
   temperature_c: number | null;
   humidity_pct: number | null;
   dht_ok: boolean;
+  probe_temperature_c?: number | null;
+  probe_ok?: boolean | null;
   vibration_do: 0 | 1;
   vibration_transitions: number;
   received_at: string;
