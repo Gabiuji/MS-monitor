@@ -9,3 +9,6 @@ backend/.venv/
 __pycache__/
 .pytest_cache/
 firmware/ms_monitor/config.h
+data/
+ai/artifacts/
+ai/.venv/
