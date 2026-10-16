@@ -10,6 +10,7 @@ export interface SensorReading {
   vibration_do: 0 | 1;
   vibration_transitions: number;
   received_at: string;
+  embedded_diagnosis?: EmbeddedDiagnosis | null;
 }
 
 export interface LatestReading {
@@ -29,4 +30,8 @@ export interface AIDiagnosis {
   reasons: string[];
   model_version: string | null;
   generated_at: string;
+  source: 'esp32' | 'backend' | 'unavailable';
+  inference_us: number | null;
 }
+
+export type EmbeddedDiagnosis = Pick<AIDiagnosis, 'source' | 'model_version' | 'risk_level' | 'risk_score' | 'confidence' | 'inference_us'>;

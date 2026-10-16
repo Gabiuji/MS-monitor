@@ -3,13 +3,14 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from ai_service import Diagnosis, ModelUnavailableError, RiskModel
+from ai_service import EmbeddedDiagnosis, received_diagnosis
+from reading_store import CsvReadingStore, HISTORY_CAPACITY
 
 
 class Reading(BaseModel):
@@ -24,6 +25,7 @@ class Reading(BaseModel):
     vibration_transitions: int = Field(ge=0)
     probe_temperature_c: float | None = Field(default=None, ge=0, le=1024)
     probe_ok: bool | None = None
+    embedded_diagnosis: EmbeddedDiagnosis | None = None
 
     @model_validator(mode="after")
     def consistent_dht(self):
@@ -46,12 +48,19 @@ class Reading(BaseModel):
             raise ValueError("Valid probe readings require a temperature; failed readings require null")
         return self
 
+    @model_validator(mode="after")
+    def consistent_embedded_inputs(self):
+        if self.embedded_diagnosis is not None and self.embedded_diagnosis.risk_level != "unavailable":
+            if not self.dht_ok or self.probe_ok is not True:
+                raise ValueError("Embedded inference requires valid DHT22 and probe readings")
+        return self
+
 
 class StoredReading(Reading):
     received_at: datetime
 
 
-def create_app(clock=time.monotonic, risk_model=None):
+def create_app(clock=time.monotonic, csv_path=None):
     app = FastAPI(title="MS-Monitor")
 
     @app.exception_handler(RequestValidationError)
@@ -66,9 +75,9 @@ def create_app(clock=time.monotonic, risk_model=None):
     lock = Lock()
     latest = None
     accepted_at = None
-    model = risk_model or RiskModel(
-        Path(__file__).resolve().parents[1] / "ai" / "artifacts" / "risk_model.joblib"
-    )
+    store = CsvReadingStore(Path(csv_path or os.getenv(
+        "READINGS_CSV_PATH", str(Path(__file__).resolve().parent / "data" / "readings.csv")
+    )))
 
     @app.get("/health")
     def health():
@@ -78,9 +87,23 @@ def create_app(clock=time.monotonic, risk_model=None):
     def post_reading(reading: Reading):
         nonlocal latest, accepted_at
         with lock:
-            latest = StoredReading(**reading.model_dump(exclude_unset=True), received_at=datetime.now(timezone.utc))
+            stored = StoredReading(**reading.model_dump(exclude_unset=True), received_at=datetime.now(timezone.utc))
+            try:
+                store.append(stored.model_dump(mode="json"))
+            except OSError as error:
+                raise HTTPException(status_code=503, detail="Could not save reading to CSV") from error
+            latest = stored
             accepted_at = clock()
             return latest
+
+    @app.get("/api/readings")
+    def get_history(limit: int = Query(default=300, ge=1, le=HISTORY_CAPACITY)):
+        return {"data": store.history(limit)}
+
+    @app.get("/api/readings/export")
+    def export_readings():
+        return StreamingResponse(store.export(), media_type="text/csv; charset=utf-8",
+                                 headers={"Content-Disposition": 'attachment; filename="ms-monitor-readings.csv"'})
 
     @app.get("/api/readings/latest")
     def get_latest():
@@ -88,18 +111,7 @@ def create_app(clock=time.monotonic, risk_model=None):
             if latest is None:
                 return dict(data=None, device_status="waiting", age_seconds=None)
             age = max(0.0, clock() - accepted_at)
-            try:
-                diagnosis = model.diagnose(latest, latest.received_at)
-            except ModelUnavailableError as error:
-                diagnosis = Diagnosis(
-                    risk_level="unavailable",
-                    risk_score=None,
-                    confidence=None,
-                    message="Diagnóstico indisponível: modelo não carregado.",
-                    reasons=[str(error)],
-                    model_version=None,
-                    generated_at=latest.received_at,
-                )
+            diagnosis = received_diagnosis(latest, latest.received_at)
             return dict(
                 data=latest,
                 device_status="stale" if age >= 10 else "online",

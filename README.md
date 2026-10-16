@@ -59,9 +59,9 @@ calculadas a partir do histórico:
 - tempo de armazenamento;
 - tempo de permanência acima de determinados limites.
 
-O desenvolvimento será feito em etapas. Primeiro será validado um modelo
-pequeno com dados históricos e, depois, será avaliada a possibilidade de
-executar a inferência diretamente na ESP32. A IA não substituirá inspeções
+O treinamento é feito no computador. O firmware inclui um modelo compacto
+para executar a inferência diretamente na ESP32, inclusive sem Wi-Fi. A API
+recebe o resultado para exibição e coleta. A IA não substitui inspeções
 físicas ou análises laboratoriais.
 
 ## Como executar
@@ -93,6 +93,10 @@ npm run dev -- --port 5173 --strictPort
 
 Dashboard: http://localhost:5173. A URL da API pode ser alterada em `.env.local`.
 
+O histórico permite visualizar temperaturas, umidade e vibração e baixar o CSV
+completo. Cada leitura aceita é salva em `backend/data/readings.csv`; a coleta
+continua enquanto a API estiver ligada, mesmo sem o navegador aberto.
+
 ### ESP32
 
 1. Copie `firmware/ms_monitor/config.example.h` para `config.h` na mesma pasta.
@@ -106,39 +110,31 @@ MAX6675: SCK no GPIO 13, CS no GPIO 23 e SO no GPIO 39; alimentação em 3,3 V e
 
 ### IA
 
-O protótipo do classificador está isolado na pasta [`ai/`](ai/). Para
-configurar o ambiente e treinar o primeiro modelo:
+O modelo embarcado está em `firmware/ms_monitor/risk_model.h` e é compilado
+junto com o sketch. Usa temperatura ambiente, umidade, temperatura da sonda
+e a diferença entre as temperaturas. O arquivo `.joblib` fica apenas no
+computador para treinamento e comparação; não é executado na placa.
 
-```bash
-python -m venv ai/.venv
-
-# Windows PowerShell
-.\ai\.venv\Scripts\Activate.ps1
-pip install -r ai/requirements.txt
-python ai/train.py
-```
-
-O treinamento usa `data/dataset.json`, separa lotes completos entre treinamento
-e teste e salva os artefatos em `ai/artifacts/`, que não são versionados. O
-modelo utiliza temperatura ambiente, umidade relativa e temperatura dos grãos,
-além de atributos derivados dessas leituras. Consulte o
-[`README da IA`](ai/README.md) para executar uma inferência manual.
+Após gravar o firmware atualizado, a serial mostra a classe e o tempo de
+inferência. O dashboard identifica **Inferência na ESP32**. Firmware antigo
+continua enviando sensores, mas não recebe um diagnóstico calculado pelo backend.
+Consulte [IA embarcada: treinamento e validação](docs/embedded-ai.md).
 
 ## Estado atual
 
-A API mantém apenas a última leitura em memória; reiniciá-la apaga os dados.
+A API salva as leituras em CSV e recupera o histórico ao reiniciar. Use apenas
+um worker. A última leitura e o estado de conexão aguardam um novo envio da ESP32.
 O dashboard já apresenta as leituras principais e a integração inicial com os
 sensores está estruturada. O dashboard também possui um card destacado para o
 diagnóstico preventivo da IA, atualizado junto com o polling da última leitura.
-O histórico persistente e a validação do modelo com dados reais ainda estão em
-desenvolvimento.
+O gráfico mostra até as últimas 3.600 leituras; o CSV preserva a coleta completa.
+A validação do modelo com dados reais ainda está em desenvolvimento.
 
 O dataset de degradação disponível em `data/dataset.json` será utilizado para
 criar o baseline do classificador. A validação deverá priorizar divisões por
 lote e por período de tempo, evitando resultados artificialmente otimistas
 causados por misturar leituras do mesmo lote entre treinamento e teste.
 
-O primeiro pipeline de treinamento já está disponível em [`ai/`](ai/). A
-execução diretamente na ESP32 ainda depende da validação do modelo com leituras
-reais e da avaliação de memória, tempo de inferência e formato de exportação
-adequado para o firmware.
+O firmware inclui o classificador demonstrativo. A validação com dados reais,
+o tempo de inferência e a memória disponível ainda precisam ser confirmados
+fisicamente na ESP32 após o Upload.

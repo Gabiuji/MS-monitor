@@ -1,0 +1,110 @@
+{
+  "model_version": "embedded-rf-6b0d1696547d",
+  "trees": 32,
+  "nodes": 2134,
+  "features": [
+    "ambient_temp_c",
+    "ambient_rh_pct",
+    "grain_temp_c",
+    "grain_air_delta_c"
+  ],
+  "classes": [
+    "critical",
+    "high",
+    "low",
+    "moderate"
+  ],
+  "dataset_sha256": "721898de783b1f456055fd47f71c9fca56be2494e9a10031ad2e606f73085eb1",
+  "training_config": {
+    "bootstrap": true,
+    "ccp_alpha": 0.0,
+    "class_weight": "balanced_subsample",
+    "criterion": "gini",
+    "max_depth": 6,
+    "max_features": "sqrt",
+    "max_leaf_nodes": null,
+    "max_samples": null,
+    "min_impurity_decrease": 0.0,
+    "min_samples_leaf": 5,
+    "min_samples_split": 2,
+    "min_weight_fraction_leaf": 0.0,
+    "monotonic_cst": null,
+    "n_estimators": 32,
+    "n_jobs": -1,
+    "oob_score": false,
+    "random_state": 42,
+    "verbose": 0,
+    "warm_start": false
+  },
+  "rows": 43200,
+  "train_lots": [
+    "LOT-0001",
+    "LOT-0002",
+    "LOT-0003",
+    "LOT-0004",
+    "LOT-0005",
+    "LOT-0006",
+    "LOT-0008",
+    "LOT-0009",
+    "LOT-0011",
+    "LOT-0012",
+    "LOT-0013",
+    "LOT-0015",
+    "LOT-0016",
+    "LOT-0017",
+    "LOT-0019"
+  ],
+  "test_lots": [
+    "LOT-0000",
+    "LOT-0007",
+    "LOT-0010",
+    "LOT-0014",
+    "LOT-0018"
+  ],
+  "accuracy": 0.9899074074074075,
+  "balanced_accuracy": 0.4998597344305218,
+  "macro_f1": 0.24873202736029035,
+  "classification_report": {
+    "critical": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 0.0
+    },
+    "high": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 0.0
+    },
+    "low": {
+      "precision": 0.9901824580902102,
+      "recall": 0.9997194688610436,
+      "f1-score": 0.9949281094411614,
+      "support": 10694.0
+    },
+    "moderate": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 106.0
+    },
+    "accuracy": 0.9899074074074075,
+    "macro avg": {
+      "precision": 0.24754561452255255,
+      "recall": 0.2499298672152609,
+      "f1-score": 0.24873202736029035,
+      "support": 10800.0
+    },
+    "weighted avg": {
+      "precision": 0.9804640006311766,
+      "recall": 0.9899074074074075,
+      "f1-score": 0.9851630742929426,
+      "support": 10800.0
+    }
+  },
+  "limitations": [
+    "Classroom baseline; not validated with physical grain storage experiments.",
+    "Test metrics do not establish performance for classes absent from test lots."
+  ]
+}

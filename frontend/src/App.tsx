@@ -1,11 +1,14 @@
+import { useState } from 'react';
 import { ConnectionStatus } from './components/ConnectionStatus';
 import { FanCard } from './components/FanCard';
 import { AIDiagnosisCard } from './components/AIDiagnosisCard';
 import { SensorCard } from './components/SensorCard';
 import { useReadings } from './hooks/useReadings';
+import { ReadingHistory } from './components/ReadingHistory';
 
 export function App() {
-  const { latest, apiStatus } = useReadings();
+  const [historyLimit, setHistoryLimit] = useState(300);
+  const { latest, apiStatus, history, historyStatus } = useReadings(historyLimit);
   const sensorData = latest.data;
   const deviceLabel = { waiting: 'Aguardando primeira leitura', online: 'Recebendo dados', stale: 'Dispositivo sem dados recentes' }[latest.device_status];
   const label = apiStatus === 'unreachable' ? 'API inacessível' : apiStatus === 'loading' ? 'Conectando à API' : deviceLabel;
@@ -42,7 +45,7 @@ export function App() {
           {sensorData?.dht_ok === false ? ' Falha do DHT22: temperatura e umidade indisponíveis; telemetria de vibração preservada.' : ''}
           {sensorData?.probe_ok === false ? ' Falha na leitura da sonda MAX6675.' : ''}
         </p>
-        <AIDiagnosisCard diagnosis={latest.diagnosis} waitingForReading={!sensorData} />
+        <AIDiagnosisCard diagnosis={latest.diagnosis} waitingForReading={!sensorData} outdated={outdated} />
         <section aria-label="Leituras atuais" className="row g-4">
           <div className="col-12 col-md-6 col-xl">
             <SensorCard
@@ -87,25 +90,8 @@ export function App() {
 
         <section className="row g-4 mt-1">
           <div className="col-12 col-lg-8">
-            <div className="card border-0 dashboard-card h-100">
-              <div className="card-body p-4">
-                <div className="d-flex justify-content-between align-items-center mb-4">
-                  <div>
-                    <h2 className="h5 fw-bold mb-1">Histórico das leituras</h2>
-                    <p className="text-body-secondary small mb-0">Reservado para uma próxima etapa</p>
-                  </div>
-                  <button className="btn btn-sm btn-light" type="button" disabled>
-                    Últimas 24h
-                  </button>
-                </div>
-                <div className="chart-placeholder d-flex align-items-center justify-content-center">
-                  <div className="text-center text-body-secondary">
-                    <i className="bi bi-bar-chart-line fs-2 d-block mb-2" />
-                    <span>Histórico ainda não implementado.</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <ReadingHistory readings={history} status={historyStatus} outdated={outdated || latest.device_status === 'waiting'}
+              limit={historyLimit} onLimitChange={setHistoryLimit} />
           </div>
           <div className="col-12 col-lg-4">
             <div className="card border-0 dashboard-card h-100">

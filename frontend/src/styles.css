@@ -207,12 +207,21 @@ body {
   animation: fan-pulse 2s ease-in-out infinite;
 }
 
-.chart-placeholder {
+.history-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-height: 15rem;
+  padding: 1rem;
+  text-align: center;
   border: 1px dashed #ced4da;
   border-radius: 0.75rem;
   background: linear-gradient(135deg, #f8f9fa, #fff);
 }
+
+.history-chart { display: block; width: 100%; height: auto; }
+.history-axis { fill: #6c757d; font-size: 12px; }
+.history-legend-dot { width: 0.65rem; height: 0.65rem; border-radius: 50%; }
 
 .system-status-item {
   display: flex;

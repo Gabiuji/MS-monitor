@@ -2,7 +2,11 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 from app import create_app
-from ai_service import Diagnosis
+
+
+@pytest.fixture(autouse=True)
+def isolate_reading_storage(tmp_path, monkeypatch):
+    monkeypatch.setenv("READINGS_CSV_PATH", str(tmp_path / "readings.csv"))
 
 
 @pytest.fixture
@@ -18,17 +22,9 @@ def payload():
                 vibration_do=0, vibration_transitions=44)
 
 
-class FakeRiskModel:
-    def diagnose(self, reading, generated_at):
-        return Diagnosis(
-            risk_level="high",
-            risk_score=0.72,
-            confidence=0.84,
-            message="Condições favoráveis à deterioração.",
-            reasons=["Umidade relativa do ar elevada."],
-            model_version="test",
-            generated_at=generated_at,
-        )
+def embedded_diagnosis(**changes):
+    return dict(source="esp32", risk_level="high", risk_score=0.72, confidence=0.84,
+                inference_us=124, model_version="embedded-test") | changes
 
 
 def test_waiting_and_health(setup):
@@ -53,13 +49,15 @@ def test_post_online_stale_and_recovery(setup):
 
 
 def test_latest_includes_ai_diagnosis(setup):
-    now = setup[1]
-    with TestClient(create_app(clock=lambda: now[0], risk_model=FakeRiskModel())) as client:
-        client.post("/api/readings", json=payload() | dict(probe_ok=True, probe_temperature_c=26.5))
-        latest = client.get("/api/readings/latest").json()
+    client, _ = setup
+    client.post("/api/readings", json=payload() | dict(probe_ok=True, probe_temperature_c=26.5,
+                                                      embedded_diagnosis=embedded_diagnosis()))
+    latest = client.get("/api/readings/latest").json()
     assert latest["diagnosis"]["risk_level"] == "high"
     assert latest["diagnosis"]["risk_score"] == 0.72
-    assert latest["diagnosis"]["model_version"] == "test"
+    assert latest["diagnosis"]["model_version"] == "embedded-test"
+    assert latest["diagnosis"]["source"] == "esp32"
+    assert latest["diagnosis"]["inference_us"] == 124
 
 
 def test_latest_diagnosis_requires_probe(setup):
@@ -67,7 +65,57 @@ def test_latest_diagnosis_requires_probe(setup):
     client.post("/api/readings", json=payload())
     diagnosis = client.get("/api/readings/latest").json()["diagnosis"]
     assert diagnosis["risk_level"] == "unavailable"
-    assert "sonda" in diagnosis["message"]
+    assert diagnosis["source"] == "unavailable"
+
+
+def test_legacy_firmware_never_triggers_backend_inference(setup, monkeypatch):
+    import joblib
+
+    def fail(*_args):
+        raise AssertionError("Backend inference must not be used by the API")
+
+    monkeypatch.setattr(joblib, "load", fail)
+    client, _ = setup
+    client.post("/api/readings", json=payload() | dict(probe_ok=True, probe_temperature_c=26.5))
+    diagnosis = client.get("/api/readings/latest").json()["diagnosis"]
+    assert diagnosis["risk_level"] == "unavailable"
+    assert diagnosis["source"] == "unavailable"
+
+
+@pytest.mark.parametrize("changes", [
+    dict(source="backend"), dict(risk_level="unknown"), dict(risk_score=1.1),
+    dict(confidence=-0.1), dict(inference_us=-1), dict(inference_us=1.5),
+    dict(model_version=""), dict(risk_score=None), dict(confidence=None),
+    dict(risk_level="unavailable"), dict(confidence="0.84"),
+])
+def test_invalid_embedded_diagnosis(setup, changes):
+    client, _ = setup
+    data = payload() | dict(probe_ok=True, probe_temperature_c=26.5,
+                             embedded_diagnosis=embedded_diagnosis(**changes))
+    assert client.post("/api/readings", json=data).status_code == 422
+
+
+def test_invalid_sensors_require_unavailable_embedded_result(setup):
+    client, _ = setup
+    data = payload() | dict(dht_ok=False, temperature_c=None, humidity_pct=None,
+                             probe_ok=True, probe_temperature_c=26.5,
+                             embedded_diagnosis=embedded_diagnosis())
+    assert client.post("/api/readings", json=data).status_code == 422
+    data["embedded_diagnosis"] = embedded_diagnosis(risk_level="unavailable", risk_score=None,
+                                                     confidence=None, inference_us=0)
+    assert client.post("/api/readings", json=data).status_code == 201
+    result = client.get("/api/readings/latest").json()["diagnosis"]
+    assert result["risk_level"] == "unavailable"
+    assert result["source"] == "esp32"
+
+
+@pytest.mark.parametrize("value", ["NaN", "Infinity", "-Infinity"])
+def test_nonfinite_embedded_diagnosis(setup, value):
+    client, _ = setup
+    data = payload() | dict(probe_ok=True, probe_temperature_c=26.5,
+                             embedded_diagnosis=embedded_diagnosis())
+    body = json.dumps(data).replace('"confidence": 0.84', f'"confidence": {value}')
+    assert client.post("/api/readings", content=body, headers={"Content-Type": "application/json"}).status_code == 422
 
 
 def test_dht_failure(setup):
