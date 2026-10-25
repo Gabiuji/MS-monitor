@@ -1,0 +1,173 @@
+\section{Evidências disponíveis e plano de testes}
+\label{sec:avaliacao}
+
+\subsection{Resultados computacionais do modelo}
+
+As métricas da Tabela~\ref{tab:metricas} são provenientes da avaliação
+registrada para o modelo compacto, nos lotes de teste descritos na
+Seção~\ref{sec:modelo}. Elas avaliam correspondência com rótulos do
+dataset local, não detecção experimental de fungos no mini-silo.
+
+\begin{table}[htbp]
+\centering
+\caption{Avaliação do modelo no conjunto de teste}
+\label{tab:metricas}
+\begin{tabularx}{\textwidth}{Y L{5.8cm}}
+\toprule
+Indicador & Resultado\\
+\midrule
+Registros de teste & 10\,800\\
+Acurácia geral do Random Forest & 98,9907\%\\
+Acurácia balanceada & 49,9860\%\\
+F1 macro, considerando quatro rótulos & 24,8732\%\\
+Acurácia de prever sempre \texttt{low} & 99,0185\%\\
+\bottomrule
+\end{tabularx}
+\source{relatório \texttt{embedded-ai-metrics.json}; referência constante calculada pela proporção da classe \texttt{low}}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Representatividade das classes no teste e sensibilidade observada}
+\label{tab:classes}
+\begin{tabularx}{\textwidth}{L{2.7cm}L{2.4cm}L{3cm}Y}
+\toprule
+Rótulo & Suporte & Recall & Interpretação\\
+\midrule
+\texttt{low} & 10\,694 & 99,9719\% & Classe amplamente predominante.\\
+\texttt{moderate} & 106 & 0\% & Nenhum exemplo dessa classe foi reconhecido corretamente.\\
+\texttt{high} & 0 & Não estimável & Ausente no conjunto de teste.\\
+\texttt{critical} & 0 & Não estimável & Ausente no conjunto de teste.\\
+\bottomrule
+\end{tabularx}
+\source{relatório de classificação do modelo compacto}
+\end{table}
+
+O conjunto é fortemente desbalanceado. Uma decisão constante pela
+classe \texttt{low} alcançaria
+$10\,694/10\,800\approx99{,}02\%$, ligeiramente acima da acurácia
+do modelo. Portanto, a acurácia geral elevada não demonstra vantagem
+preditiva nesse teste. O recall nulo de \texttt{moderate} impede
+afirmar que o classificador reconhece adequadamente os níveis
+intermediários.
+
+Há também uma diferença de cálculo entre os indicadores. O F1 macro
+reportado inclui os quatro rótulos, atribuindo zero a resultados
+indefinidos pela convenção \texttt{zero\_division=0}. A acurácia
+balanceada corresponde à média dos recalls das classes presentes
+no teste. Não se devem interpretar esses percentuais como avaliação
+representativa das quatro condições. Para \texttt{high} e
+\texttt{critical}, suporte zero significa falta de evidência,
+não demonstração de erro ou acerto nessas condições.
+
+\subsection{Verificação de software e da exportação}
+
+Na revisão do relatório, foram executados 87 testes de backend e IA,
+sete testes do frontend e o build TypeScript/Vite. As verificações
+abrangem validação do contrato, compatibilidade com firmware anterior,
+falhas independentes dos sensores, origem do diagnóstico, persistência
+CSV e atualização do histórico. A existência de testes aprovados
+não constitui validação metrológica ou biológica.
+
+O script de verificação compilou o preditor C++ em ambiente nativo
+e o comparou com o modelo Python em 43\,200 registros. Não houve
+divergência de classe, e a maior diferença de probabilidade foi de
+aproximadamente $3{,}01\times10^{-8}$. Trata-se de evidência de
+fidelidade da exportação. Essa comparação inclui dados de treinamento
+e, por isso, não é outra estimativa de generalização do modelo.
+
+O registro de compilação da Heltec V2 descrito na
+Seção~\ref{sec:modelo} é uma evidência distinta da comparação nativa.
+Não foram realizados, nesta revisão documental, gravação de firmware, ensaio de
+calibração, medição de consumo ou cronometragem de inferência na placa.
+Essas tarefas permanecem no plano experimental.
+
+\subsection{Plano de testes físicos e de integração}
+
+As Tabelas~\ref{tab:testes} e~\ref{tab:testes-integracao} definem procedimentos e critérios a serem
+registrados, sem apresentá-los como resultados já alcançados.
+Instrumentos de referência devem ter sua identificação e condição
+de calibração documentadas. Antes dos ensaios, devem ser registrados
+espécie e massa dos grãos, geometria do mini-silo, posição dos
+sensores e condições ambientais; esses elementos não estão
+caracterizados no material técnico examinado.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Plano de verificação dos componentes e das falhas}
+\label{tab:testes}
+\begin{tabularx}{\textwidth}{L{2.5cm}Y Y}
+\toprule
+Objeto & Procedimento e instrumento & Evidência a registrar\\
+\midrule
+Alimentação &
+Medir entrada USB e barramento de 3,3~V com multímetro; observar quedas
+durante transmissão com osciloscópio, se disponível. &
+Tensão mínima/máxima, corrente média e picos observáveis; confrontar com
+a fonte e o regulador efetivos. Não inferir picos apenas da média.\\
+DHT22 &
+Comparar temperatura e UR com termo-higrômetro de referência em condições
+estáveis e após mudança controlada de ambiente. &
+Diferenças entre instrumentos, dispersão, tempo de estabilização e
+ocorrência de leituras inválidas. Não confundir concordância pontual com calibração.\\
+Sonda e MAX6675 &
+Observar repouso, aquecer levemente a ponta com a mão e aguardar
+estabilização; comparar com termômetro de referência em pontos adequados
+à montagem. Verificar termopar aberto. &
+Resposta térmica, diferença em relação à referência e sinalização
+\texttt{probe\_ok=false}. Um valor numérico isolado não comprova exatidão.\\
+SW-420 &
+Aplicar perturbações reproduzíveis na estrutura; observar DO e transições
+com analisador lógico, quando disponível. &
+Polaridade, limiar ajustado, janela real e repetibilidade. Não converter
+contagem em intensidade, RPM ou estado de ventilação.\\
+Falhas e IA &
+Introduzir falhas independentes de DHT22 e termopar, preservando conexões
+seguras; conferir o payload e a serial. &
+Medições inválidas null, classe \texttt{unavailable}, score/confiança
+null e continuidade da telemetria válida de vibração.\\
+\bottomrule
+\end{tabularx}
+\source{elaboração própria; plano de trabalho, sem resultado físico presumido}
+\end{table}
+
+\begin{table}[htbp]
+\centering\small
+\caption{Plano de verificação da integração e da validade do classificador}
+\label{tab:testes-integracao}
+\begin{tabularx}{\textwidth}{L{2.5cm}Y Y}
+\toprule
+Objeto & Procedimento e instrumento & Evidência a registrar\\
+\midrule
+Execução local &
+Com sensores válidos, observar serial e interromper o Wi-Fi;
+registrar a duração da inferência e memória livre em execução. &
+Classificação local sem depender da API; distribuição de tempos
+de \texttt{inference\_us}, reinicializações e comportamento do heap.\\
+Rede e API &
+Interromper/restabelecer Wi-Fi e servidor; enviar payloads válidos
+e inválidos em ambiente de teste isolado. &
+Retornos 201/422/503 quando aplicáveis, estados de frescor,
+reconexão e inexistência de classificação reapresentada como nova.\\
+CSV e interface &
+Reiniciar a API, consultar o histórico, exportar o CSV e interromper a
+rede do navegador durante uma coleta de teste. &
+Persistência das linhas aceitas, indicadores de validade, origem
+\texttt{esp32}, preservação de dados antigos e atualização de novos pontos.\\
+Validade do classificador &
+Definir protocolo de coleta por lotes independentes, com referências
+físicas e, quando cabível, análise microbiológica por laboratório habilitado. &
+Rótulos externos às previsões, matriz de confusão, recall por classe,
+incerteza das métricas e avaliação de lotes não usados no ajuste.\\
+\bottomrule
+\end{tabularx}
+\source{elaboração própria; plano de trabalho, sem resultado físico presumido}
+\end{table}
+
+Para investigar fungos, os rótulos futuros não devem ser produzidos
+apenas pela própria temperatura ou pela classe prevista pelo modelo:
+isso criaria uma avaliação circular. A aquisição ambiental e a
+determinação de referência devem ser independentes. O planejamento
+também deve considerar variações de tipo de grão, teor de água,
+localização da sonda e fontes externas de aquecimento.
+\FloatBarrier

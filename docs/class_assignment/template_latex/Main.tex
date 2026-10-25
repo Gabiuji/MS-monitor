@@ -1,0 +1,36 @@
+% Report adapted from the UFAM template supplied by the group.
+\documentclass[a4paper,12pt,espacoumemeio,normaltoc,noheader,openany]{abntengmecufam}
+\input{preambulo-relatorio}
+
+\newcommand{\ReportTitle}{MS-Monitor: arquitetura de monitoramento e classificação embarcada de condições de armazenamento de grãos}
+\newcommand{\ReportAuthors}{Camila Amorim dos Santos\\Gabriel dos Santos Tavares\\Gabriel Iuji Oliveira Taguchi\\Jéssica Corsino Ribeiro\\Nathália Garcez Galindo Brandão}
+\newcommand{\ReportTeacher}{Prof. Dr. Carlos Alberto Oliveira de Freitas}
+\newcommand{\ReportPlace}{Itacoatiara--AM}
+\newcommand{\ReportYear}{2026}
+
+\hypersetup{pdftitle={MS-Monitor: arquitetura de monitoramento e classificação embarcada},
+pdfauthor={Grupo 03 - Inteligência Artificial Embarcada},
+pdfsubject={Segundo trabalho: relatório técnico do protótipo MS-Monitor}}
+
+\begin{document}
+\hypersetup{pageanchor=false}
+\input{0.1-capa}
+\input{0.2-folhaderosto_fichacatalog_engmecufam}
+\pagestyle{plain}
+\pagenumbering{roman}
+\hypersetup{pageanchor=true}
+\tableofcontents
+\clearpage
+\pagenumbering{arabic}
+\input{capitulos/01-introducao}
+\input{capitulos/02-arquitetura}
+\input{capitulos/03-aquisicao}
+\input{capitulos/04-modelo}
+\input{capitulos/05-comunicacao}
+\input{capitulos/06-avaliacao}
+\input{capitulos/07-conclusoes}
+\clearpage
+\phantomsection
+\bibliographystyle{abntex2-alf}
+\bibliography{referencias-relatorio}
+\end{document}

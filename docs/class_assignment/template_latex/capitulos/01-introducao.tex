@@ -1,0 +1,58 @@
+\section{Introdução e delimitação do trabalho}
+\label{sec:introducao}
+
+O acompanhamento das condições de armazenamento de grãos pode apoiar a
+investigação de alterações no ambiente de conservação. Temperatura e umidade
+estão entre as variáveis relevantes nesse contexto, mas uma medição ambiental
+isolada não identifica o agente causador de uma alteração. A Organização
+Mundial da Saúde descreve a relação entre determinadas condições de
+armazenamento, crescimento de fungos e ocorrência de micotoxinas, sem
+equiparar essas três situações \cite{who2023}. No presente trabalho, a
+investigação é restrita à arquitetura de um protótipo de monitoramento e à
+execução local de um classificador demonstrativo.
+
+O MS-Monitor integra uma Heltec WiFi LoRa 32 V2, um DHT22, um termopar tipo K
+com conversor MAX6675 e um módulo de vibração SW-420. O firmware adquire as
+medições, prepara quatro atributos térmicos e higrométricos e executa um
+Random Forest na ESP32. As medições e a classificação são transmitidas a
+uma API local para registro em CSV e apresentação em uma interface web.
+O sensor de vibração produz telemetria independente; seus dados não são
+entradas do modelo atual.
+
+\subsection{Relação com a atividade do Grupo 03}
+
+A especificação original do Grupo G3 solicita a representação dos módulos
+de aquisição, processamento, IA, comunicação e visualização, além de um
+fluxograma, características técnicas, exemplo de transmissão e plano de
+testes \cite{freitas2026}. Naquele enunciado, a IA está associada ao estado
+operacional da ventilação. A proposta aqui documentada foi redirecionada
+pela equipe ao monitoramento das condições de armazenamento.
+
+Este relatório utiliza os entregáveis arquiteturais da atividade como
+referência e explicita essa mudança de objeto. Não apresenta um classificador
+de ventilação, nem inclui motor, relé ou atuação automática como partes
+implementadas. Consequentemente, não atribui ao SW-420 a capacidade de
+determinar, por uma contagem isolada, se um ventilador está ligado.
+
+\subsection{Objetivo e limites de interpretação}
+
+O objetivo é descrever e avaliar a coerência técnica do caminho dos dados,
+desde os sensores até a visualização, distinguindo implementação em software,
+verificação computacional e validação experimental. Especificamente, o
+trabalho apresenta as ligações e a alimentação, o pré-processamento
+efetivamente implementado, a exportação do modelo para C++, o contrato da API
+e um plano de testes físicos.
+
+A hipótese de pesquisa é investigar se medições térmicas e de umidade podem
+contribuir para a classificação de condições associadas à deterioração.
+\textbf{O protótipo não demonstrou detecção de fungos, identificação de
+espécies, presença de micotoxinas ou segurança sanitária dos grãos.}
+Temperatura na ponta da sonda não caracteriza toda a massa armazenada;
+umidade relativa do ar também não equivale à umidade do grão ou à atividade
+de água. A confirmação dessas condições exige referências e procedimentos
+experimentais adicionais.
+
+As descrições técnicas foram confrontadas com o código do projeto, a
+documentação do modelo e os resultados computacionais disponíveis na revisão
+\texttt{07b1400} \cite{msmonitor2026}. Não se pressupõe que a existência do
+firmware compilável comprove, por si só, calibração ou desempenho em bancada.

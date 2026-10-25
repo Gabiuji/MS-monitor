@@ -1,0 +1,21 @@
+\begin{tikzpicture}[x=1cm,y=1cm]
+\node[block,text width=4.5cm] (usb) at (0,0) {Fonte / porta USB\\Entrada nominal de 5 V};
+\node[block,text width=5cm] (board) at (0,-1.8) {Heltec V2\\Entrada USB e regulação da placa};
+\node[block,text width=3.8cm] (dht) at (-5,-4.6) {DHT22\\VCC = 3,3 V};
+\node[block,text width=3.8cm] (sw) at (0,-4.6) {Módulo SW-420\\VCC = 3,3 V};
+\node[block,text width=3.8cm] (max) at (5,-4.6) {MAX6675\\VCC = 3,3 V};
+\draw[flow] (usb) -- (board);
+\draw[line width=1pt] (-5,-3.2) -- (5,-3.2);
+\draw[flow] (board.south) -- (0,-3.2);
+\node[font=\small,fill=white,anchor=south] at (-2.6,-3.2) {Barramento de 3,3 V};
+\foreach \target/\xx in {dht/-5,sw/0,max/5}{
+  \draw[flow] (\xx,-3.2) -- (\target.north);
+  \draw[line width=0.7pt] (\target.south) -- (\xx,-6);
+}
+\draw[line width=0.7pt] (-5.5,-6) -- (7.2,-6);
+\draw[line width=0.7pt] (board.east) -- (7.2,-1.8) -- (7.2,-6);
+\node[font=\small,fill=white,anchor=north] at (0,-6) {GND comum: referência elétrica e caminho de retorno};
+\node[font=\footnotesize,align=center,text width=13cm] at (0,-7.1)
+{O termopar é passivo: liga-se a T+ / T-- do MAX6675.\\
+O desenho não representa fios de dados nem um circuito de acionamento.};
+\end{tikzpicture}

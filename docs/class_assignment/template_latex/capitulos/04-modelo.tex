@@ -1,0 +1,107 @@
+\section{Modelo de IA e implantação no firmware}
+\label{sec:modelo}
+
+\subsection{Treinamento no computador e inferência no dispositivo}
+
+Random Forest combina diferentes árvores treinadas com aleatorização
+de amostras e atributos \cite{breiman2001}. No projeto, o treinamento
+foi implementado com scikit-learn \cite{pedregosa2011}. A configuração
+compacta tem 32 árvores, profundidade máxima 6, mínimo de cinco amostras
+por folha, balanceamento \texttt{balanced\_subsample} e semente 42.
+Esses parâmetros e o relatório por classe constam do artefato técnico
+\path{docs/embedded-ai-metrics.json}.
+
+A Figura~\ref{fig:treinamento} diferencia treinamento, avaliação e
+exportação. O script \path{ai/train_embedded.py} gera o cabeçalho
+\path{firmware/ms_monitor/risk_model.h}. Os parâmetros aprendidos são
+representados por tabelas constantes de nós e raízes; não são limiares
+manuais definidos para inferir presença de fungos.
+O arquivo \texttt{.joblib} é mantido no computador para reprodução e
+comparação e não é carregado pela ESP32 nem pela API atual.
+
+\begin{figure}[htbp]
+\centering
+\caption{Preparação do modelo embarcado e verificação da exportação}
+\label{fig:treinamento}
+\resizebox{0.96\textwidth}{!}{\input{figuras/treinamento}}
+\source{elaboração própria a partir dos scripts de treinamento e verificação}
+\end{figure}
+
+Os dados locais são descritos na documentação como sintéticos: 43\,200
+registros distribuídos em 20 lotes. Não há, no material examinado,
+comprovação de que os rótulos derivem de análises microbiológicas
+dos grãos do protótipo. A identificação do conjunto é preservada
+por seu hash SHA-256 no relatório de treinamento.
+
+O código usa a \textbf{primeira divisão} produzida por
+\texttt{StratifiedGroupKFold} com cinco partições, mantendo lotes
+inteiros separados. O experimento utiliza 32\,400 registros de 15
+lotes no treinamento e 10\,800 registros de cinco lotes no teste.
+Não se trata de uma média de desempenho de cinco rodadas de validação
+cruzada, nem de uma validação temporal independente.
+
+\subsection{Saídas do classificador e seu significado}
+
+A execução retorna um dos rótulos \texttt{low}, \texttt{moderate},
+\texttt{high} ou \texttt{critical}. Neste relatório, eles são
+interpretados como níveis nominais do conjunto de treinamento,
+respectivamente baixo, moderado, alto e crítico.
+Esses nomes não estabelecem critérios agronômicos validados nem
+recomendações automáticas de intervenção.
+
+Para cada classe $c$, o preditor calcula a média das probabilidades
+das folhas atingidas pelas $M=32$ árvores:
+\begin{equation}
+p_c(\mathbf{x})=\frac{1}{M}\sum_{m=1}^{M}p_{m,c}(\mathbf{x}),
+\qquad
+\widehat{c}=\arg\max_c p_c(\mathbf{x}).
+\end{equation}
+A confiança reportada é $\max_c p_c(\mathbf{x})$; não corresponde a
+uma medida experimental de certeza sobre a condição sanitária do lote.
+O índice apresentado em \texttt{risk\_score} segue a convenção
+\begin{equation}
+s=0\,p_{\mathrm{low}}+0{,}33\,p_{\mathrm{moderate}}
++0{,}66\,p_{\mathrm{high}}+1\,p_{\mathrm{critical}}.
+\label{eq:score}
+\end{equation}
+Os pesos são uma escala de apresentação adotada no código. Mesmo
+quando expresso como percentual no dashboard, $s$ não é uma
+probabilidade calibrada de haver fungos ou micotoxinas.
+
+\subsection{Execução e independência da rede}
+
+O fluxo da Figura~\ref{fig:algoritmo} segue a ordem do firmware.
+O tempo de inferência é medido ao redor da chamada local do preditor
+com \texttt{micros()}, antes de verificar a conectividade.
+Sem Wi-Fi, o dispositivo continua lendo os sensores, classificando
+entradas válidas e registrando o resultado na serial. Os dados
+desse período não são enfileirados para envio posterior.
+
+Quando há rede, ocorre uma tentativa de POST por ciclo. O firmware
+não testa antecipadamente a disponibilidade da API: interpreta a
+resposta HTTP após tentar o envio. O código considera 201 como
+aceitação e registra os demais códigos ou erros. Os limites
+configurados são 700~ms para conexão e 1000~ms para leitura HTTP;
+não representam garantia de latência total do ciclo.
+
+\begin{figure}[p]
+\centering
+\caption{Fluxograma da aquisição e da inferência no firmware}
+\label{fig:algoritmo}
+\resizebox{0.94\textwidth}{!}{\input{figuras/algoritmo}}
+\source{elaboração própria a partir de \texttt{ms\_monitor.ino}; a rotina de interrupção do SW-420 opera em paralelo ao ciclo principal}
+\end{figure}
+
+O modelo embarcado é identificado como \modelversion. O relatório de
+compilação registrado no projeto, para core Espressif 3.3.12 e
+FQBN \path{esp32:esp32:heltec_wifi_lora_32_V2}, informa
+1\,043\,428 bytes de programa, diante de um limite de 3\,342\,336 bytes,
+e 48\,824 bytes de variáveis globais na região de 327\,680 bytes
+contabilizada pela ferramenta. As tabelas de nós e raízes ocupam
+102\,496 bytes no compilador nativo de verificação.
+
+Esses números sustentam a análise de compatibilidade da compilação,
+mas não medem o heap livre em execução, a duração da inferência
+na placa ou o consumo elétrico. Tampouco se deve confundir a região
+de memória descrita pelo compilador com a SRAM física total do chip.
+\FloatBarrier

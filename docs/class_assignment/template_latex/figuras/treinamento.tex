@@ -1,0 +1,29 @@
+\begin{tikzpicture}[x=1cm,y=1cm]
+\node[block,text width=8cm] (data) at (0,0)
+{Base local: 43.200 registros / 20 lotes\\Três medições e diferença térmica};
+\node[block,text width=8cm] (split) at (0,-1.6)
+{Separação por lote\\Primeira divisão de cinco partições};
+\node[block,text width=5.4cm] (train) at (-3.6,-3.5)
+{Treinamento: 15 lotes\\Random Forest compacto\\32 árvores / profundidade até 6};
+\node[block,text width=5.4cm] (test) at (3.6,-3.5)
+{Teste separado: 5 lotes\\10.800 registros\\Não reutilizados no ajuste};
+\node[block,text width=5.4cm] (export) at (-3.6,-5.7)
+{Exportar parâmetros aprendidos\\Cabeçalho C++ e versão do modelo};
+\node[block,text width=5.4cm] (metrics) at (3.6,-5.7)
+{Avaliar previsões\\Métricas por classe e\\limites de representatividade};
+\node[block,text width=5.4cm] (reference) at (3.6,-7.7)
+{Preditor Python de referência\\Aplicar ao dataset completo};
+\node[block,text width=11.5cm] (parity) at (0,-9.7)
+{Comparar o preditor C++ com o Python no dataset completo\\
+Paridade de implementação não equivale a validação agronômica};
+\draw[flow] (data) -- (split);
+\draw[flow] (split.south) -- ++(0,-0.35) -| (train.north);
+\draw[flow] (split.south) -- ++(0,-0.35) -| (test.north);
+\draw[flow] (train) -- (export);
+\draw[flow] (test) -- (metrics);
+\draw[flow] (train.east) -- (test.west) node[midway,above,edge label] {modelo};
+\fill (0,-3.5) circle (1.3pt);
+\draw[flow] (0,-3.5) -- (0,-7.7) -- (reference.west);
+\draw[flow] (export.south) -- (-3.6,-8.7) -| ([xshift=-2cm]parity.north);
+\draw[flow] (reference.south) -- ++(0,-0.35) -| ([xshift=2cm]parity.north);
+\end{tikzpicture}

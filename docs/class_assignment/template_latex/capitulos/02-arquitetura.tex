@@ -1,0 +1,110 @@
+\section{Arquitetura funcional e alimentação}
+\label{sec:arquitetura}
+
+A Figura~\ref{fig:arquitetura} diferencia as rotinas térmicas utilizadas na
+classificação da contagem de transições do SW-420. Os blocos internos
+representam funções executadas na mesma ESP32, e não microcontroladores
+distintos. O treinamento ocorre previamente no computador; o dispositivo
+executa somente a inferência do modelo exportado.
+
+\begin{figure}[htbp]
+\centering
+\caption{Arquitetura implementada: aquisição, inferência local e serviços externos}
+\label{fig:arquitetura}
+\resizebox{\textwidth}{!}{\input{figuras/arquitetura}}
+\source{elaboração própria a partir do firmware, da API e do frontend do MS-Monitor}
+\end{figure}
+
+\begin{table}[htbp]
+\centering
+\caption{Responsabilidade dos módulos e limites da implementação}
+\label{tab:modulos}
+\small
+\begin{tabularx}{\textwidth}{L{3cm}Y}
+\toprule
+Módulo & Função no protótipo\\
+\midrule
+Aquisição & Ler DHT22 e MAX6675; capturar mudanças do sinal digital de vibração por interrupção.\\
+Pré-processamento & Validar as entradas, preservar indicadores de falha e calcular a diferença entre temperaturas.\\
+IA embarcada & Executar o Random Forest exportado; produzir classe, índice, confiança e duração da chamada.\\
+Interface local & Registrar medições e resultado na serial a 115200 baud, inclusive sem Wi-Fi.\\
+Comunicação & Realizar uma tentativa de POST por leitura quando houver Wi-Fi; tratar o código de retorno.\\
+API e armazenamento & Validar o contrato, registrar cada POST aceito em CSV e disponibilizar consultas.\\
+Visualização & Exibir medições, origem da classificação, frescor dos dados e histórico no navegador.\\
+Atuação & Não implementada; não há comando de ventilador no firmware atual.\\
+\bottomrule
+\end{tabularx}
+\source{elaboração própria a partir do código do projeto}
+\end{table}
+
+\subsection{Caminhos de energia e de retorno}
+
+A alimentação adotada é USB, com entrada nominal de 5~V na placa e
+distribuição de 3,3~V aos módulos sensores. O terra é comum, conforme
+a Figura~\ref{fig:alimentacao}. As linhas de alimentação e GND não representam
+o fluxo lógico de dados. O termopar é passivo e se conecta às entradas
+próprias do MAX6675; não recebe alimentação de 3,3~V na ponta sensora.
+
+\begin{figure}[htbp]
+\centering
+\caption{Distribuição de alimentação adotada e referência de terra comum}
+\label{fig:alimentacao}
+\resizebox{\textwidth}{!}{\input{figuras/alimentacao}}
+\source{elaboração própria a partir das ligações documentadas; diagrama funcional, não esquema completo da placa}
+\end{figure}
+
+Os sinais que chegam aos GPIOs devem ser compatíveis com a lógica de
+3,3~V da ESP32. A placa utilizada possui recursos adicionais de comunicação
+e visualização, mas LoRa, Bluetooth e OLED não são utilizados pelo firmware
+analisado \cite{heltecV2,espressif2026}. O GPIO~21, associado ao controle
+de Vext nessa montagem, não é destinado aos sensores.
+
+\begin{table}[htbp]
+\centering
+\caption{Mapa de conexões utilizado no firmware}
+\label{tab:pinos}
+\begin{tabularx}{\textwidth}{L{4.0cm}L{2.3cm}Y}
+\toprule
+Sinal & GPIO & Interface e direção em relação à ESP32\\
+\midrule
+DHT22 --- DAT & 17 & Protocolo digital temporizado, bidirecional.\\
+SW-420 --- DO & 22 & Entrada digital; interrupção em \texttt{CHANGE}.\\
+MAX6675 --- SCK & 13 & Saída de relógio gerada por software.\\
+MAX6675 --- CS & 23 & Saída de seleção do conversor.\\
+MAX6675 --- SO & 39 & Entrada de dados; GPIO de entrada.\\
+VCC dos módulos & --- & Barramento de 3,3~V.\\
+GND dos módulos & --- & Retorno comum ao GND da placa.\\
+\bottomrule
+\end{tabularx}
+\source{elaboração própria a partir das constantes e rotinas do firmware}
+\end{table}
+
+\subsection{Grandezas elétricas e dimensionamento pendente}
+
+O dimensionamento final requer a identificação da fonte USB, a corrente
+dos módulos efetivamente montados e os picos durante a comunicação. Esses
+valores não foram determinados pelos testes de software. Assim, não se
+apresenta uma soma de correntes hipotéticas como consumo medido do protótipo.
+A potência de entrada deve ser obtida no mesmo ponto de medição:
+\begin{equation}
+P_{\mathrm{USB}} = V_{\mathrm{USB}} I_{\mathrm{USB}}.
+\end{equation}
+Já a potência entregue apenas aos sensores no barramento de 3,3~V é
+\begin{equation}
+P_{\mathrm{sensores}} =
+3{,}3\left(I_{\mathrm{DHT22}}+I_{\mathrm{MAX6675}}+I_{\mathrm{SW420}}\right),
+\end{equation}
+com correntes em ampères e potência em watts. Essa expressão não inclui
+todo o consumo da placa, nem as perdas de regulação.
+
+Como exemplo exclusivamente didático, para um resistor ideal de
+$10~\mathrm{k}\Omega$ submetido a 3,3~V, a Lei de Ohm fornece
+\begin{equation}
+I=\frac{V}{R}=\frac{3{,}3}{10\,000}
+=0{,}00033~\mathrm{A}=0{,}33~\mathrm{mA}.
+\end{equation}
+Esse resistor não é apresentado como componente identificado da montagem.
+O exemplo apenas ilustra a relação entre tensão, resistência e corrente.
+O plano de testes da Seção~\ref{sec:avaliacao} prevê a medição da entrada
+USB e do barramento de 3,3~V antes de concluir sobre a suficiência da fonte.
+\FloatBarrier

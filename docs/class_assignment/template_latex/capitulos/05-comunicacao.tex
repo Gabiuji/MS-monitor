@@ -1,0 +1,120 @@
+\section{Comunicação, armazenamento e visualização}
+\label{sec:comunicacao}
+
+\subsection{Contrato de transmissão}
+
+O envio é realizado pela ESP32 em rede Wi-Fi de 2,4~GHz, por
+\texttt{POST /api/readings}. A API valida tipos, limites e coerência
+dos indicadores de falha; um registro aceito e persistido retorna HTTP~201.
+Payloads incompatíveis retornam 422. Falha de gravação do CSV retorna
+503, sem substituir a última leitura aceita.
+O Código~\ref{cod:payload} utiliza os nomes efetivamente exigidos
+pelo contrato atual.
+
+\begin{lstlisting}[caption={Payload ilustrativo compatível com o contrato da API},label={cod:payload}]
+{
+  "device_id": "ms-monitor-g3",
+  "uptime_ms": 125000,
+  "window_ms": 2500,
+  "temperature_c": 24.8,
+  "humidity_pct": 59.2,
+  "dht_ok": true,
+  "probe_temperature_c": 25.25,
+  "probe_ok": true,
+  "vibration_do": 0,
+  "vibration_transitions": 12,
+  "embedded_diagnosis": {
+    "source": "esp32",
+    "model_version": "embedded-rf-6b0d1696547d",
+    "risk_level": "low",
+    "risk_score": 0.12,
+    "confidence": 0.8,
+    "inference_us": 123
+  }
+}
+\end{lstlisting}
+
+Todos os valores desse exemplo são \textbf{ilustrativos}. Em particular,
+123~$\mu$s não é uma duração medida na placa. O objeto exemplifica o
+contrato, e não um ensaio físico. A diferença térmica é calculada
+internamente para a IA e não constitui um campo próprio no POST atual.
+
+O campo \texttt{uptime\_ms} representa tempo desde a inicialização da placa,
+não horário civil. O servidor acrescenta \texttt{received\_at} em UTC.
+Esse carimbo corresponde ao recebimento, sujeito ao atraso de comunicação,
+e não ao instante exato de aquisição. A API não executa outra inferência:
+apenas valida e prepara o diagnóstico recebido para exibição.
+
+\subsection{Consulta e persistência}
+
+\begin{table}[htbp]
+\centering
+\caption{Interfaces HTTP implementadas}
+\label{tab:api}
+\small
+\begin{tabularx}{\textwidth}{L{5.0cm}Y}
+\toprule
+Rota & Finalidade\\
+\midrule
+\texttt{GET /health} & Saúde da API, independente do estado do dispositivo.\\
+\texttt{POST /api/readings} & Recebimento e persistência de uma leitura e de seu diagnóstico embarcado.\\
+\texttt{GET /api/readings/latest} & Última leitura, idade, estado de atualização e diagnóstico recebido.\\
+\texttt{GET /api/readings?limit=300} & Histórico, em ordem cronológica, com limite de 1 a 3600 registros.\\
+\texttt{GET /api/readings/export} & Download do CSV completo até o instante da solicitação.\\
+\bottomrule
+\end{tabularx}
+\source{elaboração própria a partir de \texttt{backend/app.py}}
+\end{table}
+
+O arquivo padrão é \path{backend/data/readings.csv}. Cada POST aceito
+gera uma linha com as medições, os indicadores de validade e os campos
+\path{ai_source}, \path{ai_model_version}, \path{ai_risk_level},
+\path{ai_risk_score}, \path{ai_confidence} e
+\path{ai_inference_us}. Campos ausentes ficam em branco no CSV.
+As colunas de IA registram previsões, e não rótulos independentes de
+contaminação para treinamento supervisionado.
+
+O histórico em memória é limitado aos últimos 3600 registros e é
+recuperado do CSV ao iniciar a API. O arquivo completo continua crescendo,
+portanto a coleta exige acompanhamento do espaço em disco e cópias de
+segurança. Deve haver uma única instância da API, com um único worker,
+por arquivo. Após reiniciar, o histórico permanece disponível, mas o
+estado da última leitura aguarda um novo envio.
+
+O envelope de consulta diferencia \texttt{waiting}, antes de um POST
+aceito pela instância, \texttt{online}, para leitura com idade inferior
+a 10~s, e \texttt{stale}, a partir desse intervalo. O frescor é calculado
+por tempo monotônico no servidor. Um dispositivo com dados recentes
+ainda pode reportar falha de um sensor; por isso, conectividade e
+validade das medições são informações distintas.
+
+\subsection{Apresentação e limites de comunicação}
+
+O dashboard exibe temperatura do ar, temperatura da sonda, UR,
+transições por janela, última atualização e resultado embarcado com
+versão e tempo de inferência. A diferença térmica é uma entrada
+interna do modelo, não um card dedicado na interface examinada.
+O card de ventilação permanece como \textit{Não avaliado}.
+
+Para os valores ilustrativos do Código~\ref{cod:payload}, a interface
+apresentaria 24,8\celsius\ de temperatura do ar, 59,2\% de UR,
+25,25\celsius\ na sonda e 12 transições em uma janela de 2,5~s,
+com DO igual a zero. A classe \texttt{low} apareceria como
+\textit{Baixo risco}, com índice de 12\%, confiança de 80\% e
+inferência de 123~$\mu$s. Essa correspondência exemplifica a
+formatação dos dados recebidos, sem transformar o exemplo em
+resultado de ensaio ou o índice em confirmação de contaminação.
+
+A última leitura é consultada aproximadamente a cada segundo; o
+histórico é sincronizado de forma independente. O modo \textit{Ao vivo}
+prioriza a coleta atual, enquanto o histórico e o CSV preservam
+registros anteriores. Uma pausa de recepção não é preenchida com
+valores artificiais. Na indisponibilidade da API, os valores anteriores
+continuam visíveis com indicação de desatualização.
+
+A API local usa HTTP e não implementa autenticação de dispositivos.
+CORS restringe origens de navegador, mas não autentica POSTs enviados
+pela ESP32. A arquitetura não deve ser apresentada como solução de
+segurança para acesso público à internet. Credenciais de Wi-Fi ficam
+em um \texttt{config.h} local e não integram o repositório ou este relatório.
+\FloatBarrier

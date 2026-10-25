@@ -1,0 +1,116 @@
+\section{Aquisição e preparação dos sinais}
+\label{sec:aquisicao}
+
+\subsection{Características dos componentes}
+
+A Tabela~\ref{tab:componentes} reúne informações de referência e decisões da
+montagem. Especificações de catálogo não equivalem a erros determinados no
+protótipo: posicionamento, fiação, alimentação e características do módulo
+podem afetar as leituras. Também é necessário distinguir resolução digital,
+erro especificado e incerteza de uma comparação experimental.
+
+\begin{table}[htbp]
+\centering
+\caption{Características técnicas relevantes ao protótipo}
+\label{tab:componentes}
+\small
+\begin{tabularx}{\textwidth}{L{2.7cm}Y Y}
+\toprule
+Componente & Características de referência & Uso e limitação no projeto\\
+\midrule
+Heltec WiFi LoRa 32 V2 &
+ESP32 clássico, dois núcleos LX6 até 240~MHz, 520~KiB de SRAM no chip e
+8~MB de flash na placa; Wi-Fi de 2,4~GHz. &
+Aquisição e inferência local. A memória disponível à aplicação depende
+da partição e dos recursos do firmware.\\
+DHT22 / AM2302 &
+Temperatura de $-40$ a $80$\celsius; UR de 0 a 100\%; alimentação de
+referência de 3 a 5~V; novas leituras em intervalos de pelo menos 2~s. &
+Alimentado em 3,3~V. A referência consultada informa erro de
+$\pm0{,}5$\celsius\ e de 2 a 5 pontos percentuais de UR; não aferidos no protótipo.\\
+Termopar tipo K &
+Sensor termoelétrico passivo; a conversão depende do MAX6675 e da
+compensação da junção fria. &
+Mede o ponto em que a ponta está instalada. Não caracteriza, sozinho,
+o campo térmico de toda a massa de grãos.\\
+MAX6675 &
+Conversor de 12 bits, resolução de 0,25\celsius, alimentação de 3,0 a 5,5~V
+e conversão de até 220~ms. &
+Alimentado em 3,3~V; leitura serial por software. O código aceita
+0 a 1024\celsius; o maior código de 12 bits equivale a 1023,75\celsius.\\
+Módulo SW-420 &
+Saída digital de um módulo de detecção de vibração; o ajuste e a
+polaridade dependem da implementação utilizada. &
+Alimentado em 3,3~V. Registra DO e transições; não fornece aceleração,
+intensidade ou frequência mecânica calibradas.\\
+\bottomrule
+\end{tabularx}
+\source{especificações de referência de Heltec, Espressif, Adafruit e Analog Devices; limites de uso extraídos do firmware \cite{heltecV2,espressif2026,adafruitDHT,max6675}}
+\end{table}
+
+No MAX6675, a resolução de 0,25\celsius\ não significa que o conjunto
+termopar--conversor tenha esse erro máximo. O documento do fabricante
+estabelece, por exemplo, erro do conversor de até 8~LSB na faixa de 0 a
+700\celsius, com alimentação de 3,3~V e temperatura ambiente especificada,
+além de tratar separadamente a compensação da junção fria
+\cite{max6675}. Essas condições não constituem calibração da sonda montada.
+Para o SW-420 não foi identificado um certificado ou uma especificação
+metrológica do módulo efetivamente utilizado; por isso, não se atribuem
+unidades físicas à contagem digital.
+
+\subsection{Periodicidade e janela de vibração}
+
+O firmware estabelece um intervalo nominal de 2500~ms. Na ausência de
+atrasos adicionais, a taxa de ciclos é
+\begin{equation}
+f_{\mathrm{nominal}}=\frac{1}{2{,}5~\mathrm{s}}
+=0{,}4~\mathrm{Hz},
+\end{equation}
+equivalente a aproximadamente 24 ciclos por minuto. Essa é a taxa nominal
+de aquisição e envio, não uma frequência de amostragem de uma forma de
+onda de vibração. A duração real é transmitida em \texttt{window\_ms},
+pois atrasos de rede ou de execução podem prolongar a janela.
+
+As transições do SW-420 são capturadas por uma interrupção em
+\texttt{CHANGE}; o contador é copiado e reiniciado em seção crítica.
+O fechamento da janela antecede a leitura dos sensores térmicos, portanto
+o registro não deve ser descrito como uma aquisição simultânea de todas
+as grandezas. A rotina de interrupção não faz HTTP, leitura do DHT22 ou
+impressão serial. Como a biblioteca do DHT pode bloquear interrupções
+brevemente, a contagem continua sendo uma medida demonstrativa.
+
+A janela inicial também fornece tempo superior aos 220~ms de conversão
+do MAX6675. A leitura ocorre uma vez por ciclo, utilizando o construtor
+na ordem SCK, CS e SO. Não se pressupõe o uso de I$^{2}$C: o DHT22 usa
+seu protocolo temporizado, e o MAX6675 utiliza uma interface serial
+compatível com SPI implementada por software.
+
+\subsection{Validação, atributos e tratamento de falhas}
+
+O DHT22 é considerado válido quando temperatura e UR são finitas e estão
+nos limites aceitos pelo firmware. Se falhar, ambos os valores são enviados
+como \texttt{null}, com \texttt{dht\_ok=false}. A sonda é validada de forma
+independente; termopar aberto pode resultar em \texttt{NAN} na biblioteca,
+tratado como temperatura \texttt{null} e \texttt{probe\_ok=false}.
+Temperatura igual a zero é uma entrada possível e não identifica falha.
+
+Somente com os dois sensores térmicos válidos é preparado o vetor
+\begin{equation}
+\mathbf{x}=
+\left[T_{\mathrm{ar}},\ \mathrm{UR}_{\mathrm{ar}},\
+T_{\mathrm{sonda}},\ \Delta T\right],
+\qquad
+\Delta T=T_{\mathrm{sonda}}-T_{\mathrm{ar}}.
+\label{eq:atributos}
+\end{equation}
+O pré-processamento reproduz operações em \texttt{float32}. A versão
+embarcada não calcula médias móveis, espectro, tendências ou dias de
+armazenamento como entradas da IA. Também não implementa filtragem
+digital de vibração. Essas operações não devem ser atribuídas ao
+protótipo apenas por aparecerem em propostas de evolução.
+
+Uma falha térmica torna a classificação indisponível, sem reaproveitar
+uma classe anterior como se fosse atual. A telemetria de vibração
+continua sendo enviada. De modo recíproco, uma leitura de vibração
+igual a zero não impede a inferência térmica.
+\FloatBarrier

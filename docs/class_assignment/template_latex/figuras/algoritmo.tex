@@ -1,0 +1,38 @@
+\begin{tikzpicture}[x=1cm,y=1cm]
+\node[terminal,text width=3cm] (start) at (0,0) {Início};
+\node[block,text width=9cm] (init) at (0,-1.2)
+{Inicializar sensores, interrupção e Wi-Fi\\Modelo já incluído no firmware};
+\node[block,text width=8cm] (wait) at (0,-2.8)
+{Aguardar ciclo nominal de 2,5 s};
+\node[block,text width=10cm] (read) at (0,-4.4)
+{Fechar janela do contador em seção crítica\\Ler DO, DHT22 e MAX6675; validar cada sensor};
+\node[decision,text width=4cm] (valid) at (0,-6.6)
+{DHT22 e sonda\\válidos?};
+\node[block,text width=5.2cm] (invalid) at (-3.7,-8.8)
+{Não executar o modelo\\Classe unavailable\\Score e confiança null};
+\node[block,text width=5.2cm] (infer) at (3.7,-8.8)
+{Preparar quatro atributos\\Executar Random Forest\\Medir tempo de inferência};
+\node[block,text width=9.5cm] (serial) at (0,-10.7)
+{Registrar medições e classificação na serial\\Preservar telemetria válida de vibração};
+\node[decision,text width=4cm] (wifi) at (0,-12.9)
+{Wi-Fi\\conectado?};
+\node[block,text width=5.2cm] (offline) at (-3.7,-15.1)
+{Sem envio e sem fila\\Reconexão temporizada\\Leituras locais continuam};
+\node[block,text width=5.2cm] (post) at (3.7,-15.1)
+{Montar JSON e tentar POST\\Timeout finito\\Registrar HTTP 201 ou falha};
+\node[terminal,text width=5cm] (next) at (0,-17.1) {Próximo ciclo};
+\draw[flow] (start) -- (init);
+\draw[flow] (init) -- (wait);
+\draw[flow] (wait) -- (read);
+\draw[flow] (read) -- (valid);
+\draw[flow] (valid.west) -| (invalid.north) node[pos=0.25,above,edge label] {não};
+\draw[flow] (valid.east) -| (infer.north) node[pos=0.25,above,edge label] {sim};
+\draw[flow] (invalid.south) -- ++(0,-0.3) -| ([xshift=-2cm]serial.north);
+\draw[flow] (infer.south) -- ++(0,-0.3) -| ([xshift=2cm]serial.north);
+\draw[flow] (serial) -- (wifi);
+\draw[flow] (wifi.west) -| (offline.north) node[pos=0.25,above,edge label] {não};
+\draw[flow] (wifi.east) -| (post.north) node[pos=0.25,above,edge label] {sim};
+\draw[flow] (offline.south) -- ++(0,-0.3) -| ([xshift=-1.5cm]next.north);
+\draw[flow] (post.south) -- ++(0,-0.3) -| ([xshift=1.5cm]next.north);
+\draw[flow] (next.west) -- (-7.3,-17.1) -- (-7.3,-2.8) -- (wait.west);
+\end{tikzpicture}

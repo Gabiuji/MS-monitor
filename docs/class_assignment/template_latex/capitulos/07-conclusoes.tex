@@ -1,0 +1,34 @@
+\section{Conclusões sobre a viabilidade da arquitetura}
+
+A revisão do MS-Monitor identifica uma arquitetura coerente para
+aquisição de medições, execução local de um classificador compacto,
+comunicação por HTTP e persistência dos registros. O código separa
+a telemetria de vibração dos atributos térmicos e higrométricos,
+trata falhas dos sensores e permite inferência local independente
+do envio pela rede. A compilação registrada e a comparação
+Python--C++ sustentam a viabilidade computacional preliminar.
+
+Essa conclusão é limitada à implementação e às verificações descritas.
+Não demonstra desempenho de detecção de fungos, contaminação ou
+micotoxinas. O desbalanceamento do teste, a falta de exemplos de
+duas classes e o recall nulo da classe moderada impedem atribuir
+validade agronômica ao classificador atual. Seu uso apropriado,
+nesta etapa, é a demonstração de aquisição, inferência embarcada
+e integração de dados em uma atividade acadêmica.
+
+A continuidade do projeto exige caracterização física da montagem,
+comparação metrológica dos sensores, medição do consumo e avaliação
+do tempo de inferência na ESP32. A investigação da relação com
+condições de deterioração dependerá de dados experimentais
+representativos e referências independentes. Controle e classificação
+de ventilação permanecem fora da implementação analisada.
+
+\section*{Declaração de apoio de inteligência artificial}
+
+Ferramentas de IA generativa foram utilizadas como apoio à revisão
+textual e técnica, à organização do documento LaTeX e à elaboração
+de diagramas. As afirmações foram confrontadas com o código e as
+fontes indicadas, e exemplos simulados foram identificados como tais.
+Esse apoio não substitui a revisão dos integrantes, a avaliação
+docente ou os ensaios experimentais. A responsabilidade pela versão
+submetida permanece com os autores.

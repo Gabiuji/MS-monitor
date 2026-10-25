@@ -1,0 +1,16 @@
+% Compile from this directory; each diagram becomes a tightly cropped PDF page.
+\documentclass[a4paper,12pt,espacoumemeio,normaltoc,noheader,openany]{abntengmecufam}
+\input{preambulo-relatorio}
+\usepackage[active,tightpage]{preview}
+\PreviewEnvironment{tikzpicture}
+\setlength{\PreviewBorder}{4mm}
+
+\begin{document}
+\pagestyle{empty}
+% Figures in the report use single spacing; preserve the same node geometry.
+\setstretch{1.0}
+\input{figuras/arquitetura}
+\input{figuras/alimentacao}
+\input{figuras/treinamento}
+\input{figuras/algoritmo}
+\end{document}

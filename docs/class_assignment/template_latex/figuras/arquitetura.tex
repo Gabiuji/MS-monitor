@@ -1,0 +1,30 @@
+\begin{tikzpicture}[x=1cm,y=1cm]
+\node[block,text width=3.9cm] (dht) at (-4.8,0.9) {DHT22\\Temperatura e umidade do ar};
+\node[block,text width=3.9cm] (probe) at (0,0.9) {Termopar K + MAX6675\\Temperatura no ponto da sonda};
+\node[block,text width=3.9cm] (sw) at (4.8,0.9) {SW-420\\Saída digital DO};
+\node[block,text width=7.1cm] (thermal) at (-2.4,-1.9) {Aquisição térmica e validação\\DHT22 e sonda independentes};
+\node[block,text width=3.9cm] (count) at (4.8,-1.9) {Interrupção CHANGE\\Contagem por janela e DO};
+\node[block,text width=7.1cm] (ai) at (-2.4,-3.7) {Preparação de quatro atributos\\Random Forest em C++\\Vibração não integra o modelo};
+\node[block,text width=3.9cm] (serial) at (4.8,-3.7) {Saída serial\\Medições e classificação\\115200 baud};
+\node[block,text width=10.5cm] (packet) at (-0.4,-5.6) {JSON: medições + diagnóstico embarcado\\Comunicação Wi-Fi / HTTP POST quando conectado};
+\begin{scope}[on background layer]
+\node[draw=black!50,dashed,rounded corners,fill=blue!1,inner sep=0.35cm,
+fit=(thermal)(count)(ai)(serial)(packet)] (esp) {};
+\end{scope}
+\node[font=\footnotesize,fill=white] at ($(esp.north)+(1.7,0)$) {Rotinas na ESP32 Heltec V2};
+\node[block,text width=7.2cm] (api) at (-1.5,-7.7) {API FastAPI no computador\\Validação e consulta dos registros};
+\node[block,text width=3.1cm] (csv) at (5.0,-7.7) {Arquivo CSV\\Persistência local};
+\node[block,text width=8cm] (web) at (-1.5,-9.7) {Interface web React\\Medições, classificação, frescor e histórico};
+\draw[flow] (dht.south) -- ++(0,-0.45) -| ([xshift=-1.6cm]thermal.north);
+\draw[flow] (probe.south) -- ++(0,-0.45) -| ([xshift=1.6cm]thermal.north);
+\draw[flow] (sw) -- (count);
+\draw[flow] (thermal) -- (ai);
+\draw[flow] (ai.east) -- (serial.west);
+\draw[flow] (count) -- (serial);
+\draw[flow] (ai.south) -- ++(0,-0.3) -| ([xshift=-1.5cm]packet.north);
+\draw[flow] (count.east) -- ++(0.65,0) |- (packet.east);
+\draw[flow] (packet.south) -- (api.north) node[midway,left,edge label] {POST};
+\draw[flow] (api) -- (csv);
+\draw[{Latex[length=2.2mm]}-{Latex[length=2.2mm]},line width=0.65pt]
+  (api.south) -- (web.north) node[midway,right,edge label] {GET / resposta JSON};
+\end{tikzpicture}

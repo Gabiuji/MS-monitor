@@ -1,0 +1,85 @@
+% FAVOR, NÃO ALTERAR NADA AQUI (NO MÁX, INSERIR PACOTES)
+
+%\usepackage[bookmarks,pdftex,a4paper,colorlinks=true,citecolor=black,urlcolor=blue,linkcolor=black,pdfpagemode=None]{hyperref}
+\usepackage[bookmarks,colorlinks=true,citecolor=black,urlcolor=blue,linkcolor=black,bookmarksopen=true,pdfpagemode=UseNone]{hyperref}
+%\usepackage[colorlinks=true,linkcolor=blue,urlcolor=black,bookmarksopen=true]{hyperref}
+%\usepackage{booktabs}
+%\usepackage[open,openlevel=1]{bookmark}
+\usepackage[centertags]{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage[T1]{fontenc}
+%\usepackage[latin1]{inputenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage[alf,bibjustif,abnt-emphasize=bf,abnt-repeated-author-omit=no,abnt-etal-text=it]{abntex2cite} %ênfase na bibliografia em negrito
+% "abnt-etal-text=it" - alteração do "et.al." para itálico feita por rodrigo nascimento em 06/2022
+%\usepackage[alf,bibjustif,abnt-emphasize=em,abnt-repeated-author-omit=yes]{abntex2cite}
+\usepackage{url}
+%\usepackage{winfonts}
+\usepackage{txfonts}
+\usepackage{cancel} %para usar as barras de corte (cancelamento) \cancel, \xcancel, \bcancel, \cancelto{}{}
+\usepackage{rotating} %para rotacionar imagens - %inserido por rodrigo nascimento em 06/22
+\usepackage{graphicx} % para inserir figuras
+\usepackage{float} %inserido por gustavo, fixar tabela e figura no local pondo \begin{figure ou table}[H]
+\usepackage{ctable} %para funcionar a tabela do artigo
+\usepackage{multirow} %inserir célula mesclada (gustavo)
+\usepackage{colortbl} % usar tabela colorida do cronograma (gustavo) 
+\usepackage[version=4]{mhchem} %inserido por Rodrigo (06/22), utilizar formulas quimicas
+%\usepackage{ulem}
+%\fontfamily{arial}\selectfont
+%\renewcommand{\rmdefault}{arial}
+%\usepackage{ltablex}%
+\usepackage{longtable} % Pacote para tabelas grandes, que passem de uma página. Uma dica: o \usepackage{longtable} deve vir antes do \usepackage{arydshln} para não dar erro (conflito). Só resolveu quando pus nessa ordem - (gustavo)
+\usepackage{arydshln} % por linhas pontilhadas dentro das matrizes (matriz em bloco) - (gustavo)
+\usepackage{enumitem} % enumerar com letras. (inserido por gustavo)
+\usepackage{subfig} % inserir subfiguras (gustavo)
+\usepackage{setspace} % inserir espaçamento duplo, um e meio e simples (gustavo)
+\usepackage{pdfpages} % inserir página em pdf inteira
+\usepackage{ulem}
+\usepackage{fancyhdr}
+\usepackage{lastpage} %inserido por rodrigo nascimento 06/22 - contar total de páginas
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{pdflscape}
+
+\newcommand{\newappendix}{%
+  \refstepcounter{chapter}\chapter*{Apêndice \thechapter}%
+  %\addcontentsline{toc}{chapter}{Apêndice \thechapter}% Estava pondo em dobro no sumário
+} % Tive que por isso pro apêndice funcionar (gustavo)
+
+% Math -------------------------------------------------------------------
+\newtheorem{theorem}{Teorema}{\bfseries}{\itshape}
+\newtheorem{lemma}{Lema}{\bfseries}{\itshape}
+\pagenumbering{roman} \setcounter{page}{1} % numeração em romanos, fixar como página 1
+\newtheorem{definition}{Definição}{\bfseries}{\itshape}
+\newtheorem{corollary}{Corolário}{\bfseries}{\itshape}
+\newtheoremstyle{example}{\topsep}{\topsep}%
+	{}%         Body font
+	{}%         Indent amount (empty = no indent, \parindent = para indent)
+	{\bfseries}% Thm head font
+	{:}%        Punctuation after thm head
+	{.5em}%     Space after thm head (\newline = linebreak)
+	{\thmname{#1}\thmnumber{ #2}\thmnote{ #3}}%         Thm head spec
+\theoremstyle{example}
+\newtheorem{example}{Exemplo}
+\newtheorem{proposition}{Proposição}
+\newtheorem{algorithm}{Algoritmo}{\bfseries}{\itshape} %inserido por gustavo
+
+\newcommand{\gbold}[1]{\mbox{\boldmath $\bf#1$}} %macro para letras gregas em negrito 
+\newcommand{\lbold}[1]{\mbox{\boldmath $#1$}} %macro para letras latinas em negrito
+\newcommand{\legend}[1]{{\footnotesize Fonte}: {#1}} % macro para inserir fonte de onde foi encontrada a figura (inserido por gustavo) 18/06/21
+%\newcommand{\legend}[1]{{\small Fonte}: \textbf{#1}} 
+\newcommand{\forceindent}{\leavevmode{\parindent=1em\indent}} %macro para forçar indentação - inserido por Rodrigo em 06/22
+
+\sloppy
+
+\usepackage[framed,numbered,autolinebreaks,useliterate]{mcode} % Para inserir ambiente código (Algoritmo). Inserido por Kamilla Cerdeira em 02/2021
+%obrigatoriamente deve ter no diretório o arquivo "mcode.sty"
+\renewcommand{\lstlistingname}{Código}
+%\renewcommand{\lstlistingname}{Algoritmo}
+\lstset{numberbychapter=false}
+
+

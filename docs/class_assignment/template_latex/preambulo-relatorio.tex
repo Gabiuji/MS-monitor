@@ -1,0 +1,63 @@
+% Packages and layout for the technical report; the original class is preserved.
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\IfFileExists{brazilian.ldf}
+  {\usepackage[brazilian]{babel}}
+  {\usepackage{babel}\babelprovide[main,import=pt-BR]{brazilian}}
+\usepackage{amsmath}
+\usepackage{txfonts}
+\usepackage{microtype}
+\usepackage[left=3cm,right=2cm,top=3cm,bottom=2cm]{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{booktabs,longtable,tabularx,array}
+\usepackage{ragged2e}
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage{placeins}
+\usepackage{listings}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,fit,backgrounds,shapes.geometric}
+\usepackage[font=small,labelfont=bf,labelsep=endash]{caption}
+\usepackage{url}
+\usepackage[unicode,hidelinks]{hyperref}
+\usepackage[alf]{abntex2cite}
+
+% Use the actual hyperlink targets instead of the legacy class's TOC targets.
+\renewcommand{\ABNTaddcontentsline}[3]{%
+  \ifthenelse{\boolean{ABNTNextOutOfTOC}}
+    {\setboolean{ABNTNextOutOfTOC}{false}}
+    {\addcontentsline{#1}{#2}{#3}}}
+
+\renewcommand{\thesection}{\arabic{section}}
+\renewcommand{\thesubsection}{\thesection.\arabic{subsection}}
+\renewcommand{\theequation}{\arabic{equation}}
+\setcounter{secnumdepth}{2}
+\setcounter{tocdepth}{2}
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0.12cm}
+\setlength{\emergencystretch}{1.5em}
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.15}
+\setlist[itemize]{leftmargin=1.2cm,itemsep=2pt,topsep=4pt}
+\setlist[enumerate]{leftmargin=1.2cm,itemsep=2pt,topsep=4pt}
+\newcolumntype{L}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+\newcolumntype{Y}{>{\RaggedRight\arraybackslash}X}
+\newcommand{\source}[1]{\par\smallskip{\footnotesize\noindent Fonte: #1.\par}}
+\newcommand{\celsius}{\ensuremath{\,^{\circ}\mathrm{C}}}
+\newcommand{\modelversion}{\texttt{embedded-rf-6b0d1696547d}}
+\lstset{basicstyle=\ttfamily\footnotesize,columns=fullflexible,
+  breaklines=true,breakatwhitespace=false,showstringspaces=false,
+  frame=single,rulecolor=\color{black!30},numbers=left,numberstyle=\tiny,
+  numbersep=7pt,xleftmargin=0.5cm,framexleftmargin=0.3cm,
+  captionpos=t,aboveskip=10pt,belowskip=10pt}
+\renewcommand{\lstlistingname}{Código}
+\tikzset{
+  block/.style={draw=black!70,rounded corners=2pt,fill=blue!3,
+    align=center,font=\small,minimum height=1.1cm,inner sep=6pt},
+  decision/.style={diamond,aspect=2.7,draw=black!70,fill=orange!6,
+    align=center,font=\small,inner sep=2pt},
+  flow/.style={-{Latex[length=2.2mm]},line width=0.65pt},
+  terminal/.style={block,rounded corners=8pt,fill=black!4,minimum height=0.65cm},
+  edge label/.style={font=\footnotesize,fill=white,inner sep=2pt}
+}
