@@ -33,6 +33,14 @@ def test_waiting_and_health(setup):
     assert client.get("/api/readings/latest").json() == dict(data=None, device_status="waiting", age_seconds=None)
 
 
+@pytest.mark.parametrize("path", ["/api/readings/latest", "/api/readings?limit=100", "/api/readings/export"])
+def test_reading_responses_disable_browser_and_proxy_caches(setup, path):
+    client, _ = setup
+    response = client.get(path)
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+
+
 def test_post_online_stale_and_recovery(setup):
     client, now = setup
     result = client.post("/api/readings", json=payload())

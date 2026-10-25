@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { SensorReading } from '../types/sensors';
 import { apiUrl } from '../services/api';
+import { currentSession, isNewSession, mergeReadings } from '../utils/history';
 
 type Metric = 'temperature' | 'humidity' | 'vibration';
 interface Props {
@@ -25,11 +26,16 @@ const time = (value: number) => new Date(value).toLocaleTimeString('pt-BR');
 function measurement(reading: SensorReading, field: typeof metrics[Metric]['series'][number]['field']) {
   if ((field === 'temperature_c' || field === 'humidity_pct') && !reading.dht_ok) return null;
   if (field === 'probe_temperature_c' && reading.probe_ok !== true) return null;
-  return reading[field] ?? null;
+  const value = reading[field];
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
-export function ReadingHistory({ readings, status, outdated, limit, onLimitChange }: Props) {
+export function ReadingHistory({ readings: received, status, outdated, limit, onLimitChange }: Props) {
   const [metric, setMetric] = useState<Metric>('temperature');
+  const [mode, setMode] = useState<'live' | 'history'>('live');
+  const ordered = mergeReadings([], received, limit);
+  const readings = mode === 'live' ? currentSession(ordered) : ordered;
+  const newest = readings[readings.length - 1];
   const config = metrics[metric];
   const values = readings.flatMap(reading => config.series.map(series => measurement(reading, series.field)))
     .filter((value): value is number => value != null);
@@ -50,11 +56,20 @@ export function ReadingHistory({ readings, status, outdated, limit, onLimitChang
           <div>
             <h2 className="h5 fw-bold mb-1">Histórico das leituras</h2>
             <p className="text-body-secondary small mb-0">{readings.length} leituras • Horário de recebimento</p>
+            {newest && <p className="text-body-secondary small mb-0" aria-live="polite">Última leitura: {new Date(newest.received_at).toLocaleString('pt-BR')}</p>}
           </div>
           <a className="btn btn-sm btn-outline-primary" href={`${apiUrl}/api/readings/export`}>
             <i className="bi bi-download me-2" aria-hidden="true" />Baixar CSV completo
           </a>
         </div>
+        <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+          <div className="btn-group btn-group-sm" role="group" aria-label="Período do gráfico">
+            <button type="button" className={`btn ${mode === 'live' ? 'btn-primary' : 'btn-outline-primary'}`} aria-pressed={mode === 'live'} onClick={() => setMode('live')}>Ao vivo</button>
+            <button type="button" className={`btn ${mode === 'history' ? 'btn-primary' : 'btn-outline-primary'}`} aria-pressed={mode === 'history'} onClick={() => setMode('history')}>Histórico</button>
+          </div>
+          <span className={`badge ${outdated ? 'text-bg-warning' : 'text-bg-success'}`}>{outdated ? 'Sem dados recentes' : 'Atualização automática'}</span>
+        </div>
+        {mode === 'live' && ordered.length > readings.length && <p className="small text-body-secondary mb-3">Exibindo a coleta atual. Leituras anteriores à pausa continuam disponíveis em Histórico e no CSV.</p>}
         <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
           <div className="btn-group btn-group-sm" role="group" aria-label="Medição do histórico">
             {(Object.keys(metrics) as Metric[]).map(key => (
@@ -69,7 +84,7 @@ export function ReadingHistory({ readings, status, outdated, limit, onLimitChang
             </select>
           </label>
         </div>
-        {status === 'unreachable' && <p className="text-warning-emphasis small" role="status">Não foi possível atualizar o histórico. Os dados exibidos podem estar desatualizados.</p>}
+        {status === 'unreachable' && <p className="text-warning-emphasis small" role="status">Histórico completo indisponível. Mantendo as leituras já recebidas.</p>}
         {status === 'online' && outdated && readings.length > 0 && <p className="text-warning-emphasis small" role="status">Sem leituras recentes. Exibindo os dados já coletados.</p>}
         {!readings.length ? (
           <div className="history-empty text-body-secondary" role="status">
@@ -97,7 +112,7 @@ export function ReadingHistory({ readings, status, outdated, limit, onLimitChang
                   const value = measurement(reading, series.field);
                   const timestamp = Date.parse(reading.received_at);
                   if (value == null) { drawing = false; continue; }
-                  if (!drawing || (previous && (timestamp - Date.parse(previous.received_at) >= 10000 || previous.device_id !== reading.device_id))) segments.push([]);
+                  if (!drawing || (previous && isNewSession(previous, reading))) segments.push([]);
                   segments[segments.length - 1].push({ x: x(timestamp), y: y(value), title: `${series.label}: ${number(value)} ${config.unit} • ${new Date(timestamp).toLocaleString('pt-BR')} • Janela: ${reading.window_ms} ms` });
                   drawing = true;
                   previous = reading;

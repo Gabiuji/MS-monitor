@@ -46,4 +46,6 @@ O histórico em memória é limitado às últimas 3600 leituras e é recuperado 
 
 O dashboard separa temperaturas (°C), umidade (%) e contagem de transições. Interrompe as linhas nas falhas dos sensores e em intervalos sem dados de 10 s ou mais; os pontos usam os horários reais de recebimento. A duração da janela de vibração continua registrada em `window_ms`.
 
+O modo **Ao vivo**, padrão, mostra a coleta mais recente, separada por pausa de 10 s, reinício da placa ou mudança de dispositivo. **Histórico** permite consultar as coletas anteriores dentro do limite selecionado; o CSV continua completo. A última leitura é consultada aproximadamente a cada segundo e entra no gráfico sem aguardar a sincronização do histórico, feita separadamente. Respostas históricas atrasadas não substituem pontos novos. As requisições e respostas de leituras usam `no-store`.
+
 Esta API não autentica clientes: uso exclusivo na LAN confiável durante esta etapa.

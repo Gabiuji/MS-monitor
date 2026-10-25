@@ -63,6 +63,13 @@ class StoredReading(Reading):
 def create_app(clock=time.monotonic, csv_path=None):
     app = FastAPI(title="MS-Monitor")
 
+    @app.middleware("http")
+    async def prevent_reading_cache(request, call_next):
+        response = await call_next(request)
+        if request.url.path.startswith("/api/readings"):
+            response.headers["Cache-Control"] = "no-store"
+        return response
+
     @app.exception_handler(RequestValidationError)
     async def validation_error(_request, error):
         # Do not serialize input/ctx again: they may contain NaN, Infinity, or exceptions.
